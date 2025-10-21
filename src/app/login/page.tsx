@@ -24,16 +24,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-
   // Dummy users
   const users = [
     {
+      id: "1234567890",
       email: "john.doe@rorybank.com",
       password: "password123",
       name: "John Doe",
       role: "Customer"
     },
     {
+      id: "admin",
       email: "admin@rorybank.com", 
       password: "admin123",
       name: "Admin User",
@@ -48,17 +49,21 @@ export default function LoginPage() {
 
     // Simulate API call
     setTimeout(() => {
-      const user = users.find(u => u.email === email && u.password === password);
+      const user = users.find(u => (u.email === email || u.id === email) && u.password === password);
       
       if (user) {
         // Store user data in localStorage
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('isLoggedIn', 'true');
         
-        // Redirect to dashboard
-        router.push('/dashboard');
+        // Redirect based on role
+        if (user.role === 'Administrator') {
+          router.push('/management');
+        } else { 
+          router.push('/dashboard');
+        }
       } else {
-        setError("Invalid email or password");
+        setError("Invalid ID/email or password");
       }
       setIsLoading(false);
     }, 1000);
@@ -66,7 +71,7 @@ export default function LoginPage() {
 
   const handleDemoLogin = (userType: 'customer' | 'admin') => {
     const user = userType === 'customer' ? users[0] : users[1];
-    setEmail(user.email);
+    setEmail(user.id);
     setPassword(user.password);
   };
 
@@ -92,17 +97,17 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-6">
-              {/* Email */}
+              {/* ID/Email */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-700 font-medium">
-                  Email Address
+                  Customer ID or Email
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                   <Input
                     id="email"
-                    type="email"
-                    placeholder="Enter your email"
+                    type="text"
+                    placeholder="Enter your ID or email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-12 border-slate-200 focus:border-amber-500 focus:ring-amber-500"
@@ -164,31 +169,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Demo Users */}
-            <div className="mt-8 pt-6 border-t border-slate-200">
-              <p className="text-sm text-slate-600 text-center mb-4">Demo Accounts</p>
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleDemoLogin('customer')}
-                  className="h-10 text-xs border-slate-200 hover:border-amber-500 hover:bg-amber-50"
-                >
-                  <User className="w-3 h-3 mr-1" />
-                  Customer
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleDemoLogin('admin')}
-                  className="h-10 text-xs border-slate-200 hover:border-amber-500 hover:bg-amber-50"
-                >
-                  <Shield className="w-3 h-3 mr-1" />
-                  Admin
-                </Button>
-              </div>
-            </div>
-
+                
             {/* Security Notice */}
             <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-3">

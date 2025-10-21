@@ -32,7 +32,10 @@ import {
   TrendingDown,
   ChevronLeft,
   Eye,
-  Plus
+  Plus,
+  CreditCard,
+  Menu,
+  X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -42,6 +45,64 @@ export default function TransactionsPage() {
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState("all");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Statement generation function
+  const generateStatement = () => {
+    const transactions = [
+      { id: 1, name: "Starbucks Coffee", amount: -5.67, date: "Oct 19, 2025", time: "10:30 AM", category: "Food & Drink", status: "completed", merchant: "Starbucks #4523" },
+      { id: 2, name: "Whole Foods Market", amount: -156.43, date: "Oct 18, 2025", time: "6:45 PM", category: "Groceries", status: "completed", merchant: "Whole Foods Market" },
+      { id: 3, name: "Netflix Subscription", amount: -15.99, date: "Oct 18, 2025", time: "12:00 AM", category: "Entertainment", status: "completed", merchant: "Netflix.com" },
+      { id: 4, name: "Shell Gas Station", amount: -45.20, date: "Oct 17, 2025", time: "8:15 AM", category: "Transportation", status: "completed", merchant: "Shell #7891" },
+    ];
+
+    const totalIncome = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = Math.abs(transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0));
+    const netBalance = totalIncome - totalExpenses;
+
+    // Create statement content
+    const statementContent = `
+RORY BANK
+TRANSACTION STATEMENT
+
+Account Holder: John Doe
+Account Number: ****4582
+Statement Period: October 1 - October 19, 2025
+Statement Date: ${new Date().toLocaleDateString()}
+
+SUMMARY:
+Opening Balance: $0.00
+Total Income: $${totalIncome.toFixed(2)}
+Total Expenses: $${totalExpenses.toFixed(2)}
+Closing Balance: $${netBalance.toFixed(2)}
+
+TRANSACTION DETAILS:
+${transactions.map(t => `
+Date: ${t.date} ${t.time}
+Description: ${t.name}
+Merchant: ${t.merchant}
+Category: ${t.category}
+Amount: ${t.amount > 0 ? '+' : ''}$${t.amount.toFixed(2)}
+Status: ${t.status}
+`).join('')}
+
+This statement was generated on ${new Date().toLocaleString()}
+For any questions, please contact customer service.
+
+Rory Bank - Modern Banking
+    `.trim();
+
+    // Create and download file
+    const blob = new Blob([statementContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `RoryBank_TransactionStatement_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
 
   const allTransactions = [
     { id: 1, name: "Starbucks Coffee", amount: -5.67, date: "Oct 19, 2025", time: "10:30 AM", category: "Food & Drink", status: "completed", merchant: "Starbucks #4523" },
@@ -82,8 +143,83 @@ export default function TransactionsPage() {
   return (
     <AuthWrapper>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6">
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">Rory Bank</h1>
+              <p className="text-xs text-slate-500">Online Banking</p>
+            </div>
+          </div>
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2">
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+            <div className="bg-white w-64 h-full p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">Rory Bank</h1>
+                  <p className="text-xs text-slate-500">Online Banking</p>
+                </div>
+              </div>
+
+              <nav className="space-y-2">
+                <button onClick={() => router.push('/dashboard')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Home className="w-5 h-5" />
+                  Dashboard
+                </button>
+                
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 font-medium">
+                  <Receipt className="w-5 h-5" />
+                  Transactions
+                </button>
+                <button onClick={() => router.push('/transfer')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Send className="w-5 h-5" />
+                  Transfer
+                </button>
+                <button onClick={() => router.push('/forex')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Globe className="w-5 h-5" />
+                  Forex Rates
+                </button>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <BarChart3 className="w-5 h-5" />
+                  Analytics
+                </button>
+                <button onClick={() => router.push('/contact')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <MessageCircle className="w-5 h-5" />
+                  Contact
+                </button>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Settings className="w-5 h-5" />
+                  Settings
+                </button>
+              </nav>
+
+              <div className="absolute bottom-6 left-6 right-6">
+                <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
+                  <p className="text-sm font-medium mb-1">Need Help?</p>
+                  <p className="text-xs opacity-90 mb-3">Contact our support team</p>
+                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
+                    Get Support
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => router.push('/dashboard')}>
           <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
             <Building2 className="w-6 h-6 text-white" />
@@ -99,10 +235,7 @@ export default function TransactionsPage() {
             <Home className="w-5 h-5" />
             Dashboard
           </button>
-          <button onClick={() => router.push('/accounts/1')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-            <Receipt className="w-5 h-5" />
-            Account
-          </button>
+          
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
             <Send className="w-5 h-5" />
             Transfer
@@ -141,7 +274,7 @@ export default function TransactionsPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="ml-64 p-8">
+      <main className="lg:ml-64 p-4 lg:p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -165,7 +298,7 @@ export default function TransactionsPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-8">
           <Card className="bg-white">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -260,9 +393,9 @@ export default function TransactionsPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Actions</label>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={generateStatement}>
                     <Download className="w-4 h-4 mr-2" />
-                    Export
+                    Download Statement
                   </Button>
                   <Button variant="outline" size="sm">
                     <Filter className="w-4 h-4 mr-2" />

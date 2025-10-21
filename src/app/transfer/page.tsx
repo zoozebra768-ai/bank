@@ -26,13 +26,16 @@ import {
   Calendar,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Menu,
+  X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function TransferPage() {
   const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [transferType, setTransferType] = useState("internal");
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
@@ -59,8 +62,83 @@ export default function TransferPage() {
   return (
     <AuthWrapper>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-        {/* Sidebar */}
-        <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6">
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">Rory Bank</h1>
+              <p className="text-xs text-slate-500">Online Banking</p>
+            </div>
+          </div>
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2">
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+            <div className="bg-white w-64 h-full p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">Rory Bank</h1>
+                  <p className="text-xs text-slate-500">Online Banking</p>
+                </div>
+              </div>
+
+              <nav className="space-y-2">
+                <button onClick={() => router.push('/dashboard')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Home className="w-5 h-5" />
+                  Dashboard
+                </button>
+                
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 font-medium">
+                  <Send className="w-5 h-5" />
+                  Transfer
+                </button>
+                <button onClick={() => router.push('/transactions')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Receipt className="w-5 h-5" />
+                  Transactions
+                </button>
+                <button onClick={() => router.push('/forex')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Globe className="w-5 h-5" />
+                  Forex Rates
+                </button>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <BarChart3 className="w-5 h-5" />
+                  Analytics
+                </button>
+                <button onClick={() => router.push('/contact')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <MessageCircle className="w-5 h-5" />
+                  Contact
+                </button>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Settings className="w-5 h-5" />
+                  Settings
+                </button>
+              </nav>
+
+              <div className="absolute bottom-6 left-6 right-6">
+                <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
+                  <p className="text-sm font-medium mb-1">Need Help?</p>
+                  <p className="text-xs opacity-90 mb-3">Contact our support team</p>
+                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
+                    Get Support
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6">
           <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => router.push('/dashboard')}>
             <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
@@ -76,10 +154,7 @@ export default function TransferPage() {
               <Home className="w-5 h-5" />
               Dashboard
             </button>
-            <button onClick={() => router.push('/accounts/1')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-              <CreditCard className="w-5 h-5" />
-              Account
-            </button>
+            
             <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 font-medium">
               <Send className="w-5 h-5" />
               Transfer
@@ -118,7 +193,7 @@ export default function TransferPage() {
         </aside>
 
         {/* Main Content */}
-        <main className="ml-64 p-8">
+        <main className="lg:ml-64 p-4 lg:p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>

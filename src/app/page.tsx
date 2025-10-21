@@ -71,32 +71,28 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-slate-200 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <a href="/" className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900">Rory Bank</h1>
                 <p className="text-xs text-slate-500">Modern Banking</p>
-                <a href="/" className="text-xs text-amber-700 hover:text-amber-800 transition-colors">Home</a>
               </div>
-            </div>
+            </a>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-slate-600 hover:text-amber-700 transition-colors">Features</a>
-              <a href="#benefits" className="text-slate-600 hover:text-amber-700 transition-colors">Benefits</a>
-              <a href="/forex" className="text-slate-600 hover:text-amber-700 transition-colors">Forex Rates</a>
-              <a href="#about" className="text-slate-600 hover:text-amber-700 transition-colors">About</a>
-              <a href="/contact" className="text-slate-600 hover:text-amber-700 transition-colors">Contact</a>
+              <a href="#features" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Features</a>
+              <a href="#benefits" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Benefits</a>
+              <a href="/forex" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Forex Rates</a>
+              <a href="#about" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>About</a>
+              <a href="/contact" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Contact</a>
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              <Button variant="outline" onClick={() => router.push('/login')}>
+              <Button onClick={() => router.push('/login')} className="font-bold bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white" style={{fontFamily: 'Poppins, sans-serif'}}>
                 Log In
-              </Button>
-              <Button className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800">
-                Open Account
               </Button>
             </div>
 
@@ -109,14 +105,13 @@ export default function LandingPage() {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden mt-4 pb-4 space-y-4">
-              <a href="#features" className="block text-slate-600 hover:text-amber-700">Features</a>
-              <a href="#benefits" className="block text-slate-600 hover:text-amber-700">Benefits</a>
-              <a href="/forex" className="block text-slate-600 hover:text-amber-700">Forex Rates</a>
-              <a href="#about" className="block text-slate-600 hover:text-amber-700">About</a>
-              <a href="/contact" className="block text-slate-600 hover:text-amber-700">Contact</a>
+              <a href="#features" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Features</a>
+              <a href="#benefits" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Benefits</a>
+              <a href="/forex" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Forex Rates</a>
+              <a href="#about" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>About</a>
+              <a href="/contact" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Contact</a>
               <div className="flex flex-col gap-2 pt-4">
-                <Button variant="outline" onClick={() => router.push('/login')}>Log In</Button>
-                <Button className="bg-gradient-to-r from-amber-600 to-orange-700">Open Account</Button>
+                <Button onClick={() => router.push('/login')} className="font-bold bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white" style={{fontFamily: 'Poppins, sans-serif'}}>Log In</Button>
               </div>
             </div>
           )}
@@ -140,24 +135,13 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-lg h-14"
-                >
-                  Get Started
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg h-14"
                   onClick={() => router.push('/login')}
                 >
-                  View Demo
+                  Go to Account
+                  <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </div>
               <div className="flex items-center gap-8 mt-8 text-sm text-slate-600">
-                <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-amber-700" />
-                  <span>FDIC Insured</span>
-                </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-amber-700" />
                   <span>Secure & Safe</span>
@@ -166,20 +150,16 @@ export default function LandingPage() {
             </div>
 
             <div className="relative">
-              <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-2xl p-8 text-white shadow-2xl transform rotate-3 hover:rotate-0 transition-transform">
-                <div className="mb-6">
-                  <p className="text-amber-100 text-sm mb-2">Total Balance</p>
-                  <p className="text-4xl font-bold">₵58,024.57</p>
-                </div>
-                <div className="space-y-3">
-                  <div className="bg-white/20 rounded-lg p-4">
-                    <p className="text-amber-100 text-xs">Checking Account</p>
-                    <p className="text-xl font-semibold">₵12,345.67</p>
-                  </div>
-                  <div className="bg-white/20 rounded-lg p-4">
-                    <p className="text-amber-100 text-xs">Savings Account</p>
-                    <p className="text-xl font-semibold">₵45,678.90</p>
-                  </div>
+              <div className="rounded-2xl overflow-hidden shadow-2xl transform rotate-3 hover:rotate-0 transition-transform">
+                <img 
+                  src="https://www.sciencing.com/img/gallery/11-signs-youre-in-a-happy-relationship-according-to-psychology/there-is-mutual-respect-1758326949.webp" 
+                  alt="Happy couple in a relationship showing mutual respect" 
+                  className="w-full h-80 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="absolute bottom-6 left-6 right-6 text-white">
+                  <h3 className="text-xl font-bold mb-2">Your Financial Future</h3>
+                  <p className="text-sm opacity-90">Start your journey to financial freedom with Rory Bank</p>
                 </div>
               </div>
             </div>
@@ -339,7 +319,7 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-slate-800 pt-8 text-sm text-center">
-            <p>&copy; 2025 Rory Bank. All rights reserved. Member FDIC.</p>
+            <p>&copy; 2025 Rory Bank. All rights reserved.</p>
           </div>
         </div>
       </footer>

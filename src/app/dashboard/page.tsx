@@ -25,7 +25,9 @@ import {
   Settings,
   Bell,
   Globe,
-  MessageCircle
+  MessageCircle,
+  Menu,
+  X
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -34,14 +36,72 @@ export default function AccountDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Statement generation function
+  const generateStatement = () => {
+    const transactions = [
+      { id: 1, name: "Starbucks Coffee", amount: -5.67, date: "Oct 19, 2025", time: "10:30 AM", category: "Food & Drink", status: "completed", merchant: "Starbucks #4523" },
+      { id: 2, name: "Whole Foods Market", amount: -156.43, date: "Oct 18, 2025", time: "6:45 PM", category: "Groceries", status: "completed", merchant: "Whole Foods Market" },
+      { id: 3, name: "Netflix Subscription", amount: -15.99, date: "Oct 18, 2025", time: "12:00 AM", category: "Entertainment", status: "completed", merchant: "Netflix.com" },
+      { id: 4, name: "Shell Gas Station", amount: -45.20, date: "Oct 17, 2025", time: "8:15 AM", category: "Transportation", status: "completed", merchant: "Shell #7891" },
+    ];
+
+    const totalIncome = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = Math.abs(transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0));
+    const netBalance = totalIncome - totalExpenses;
+
+    // Create statement content
+    const statementContent = `
+RORY BANK
+ACCOUNT STATEMENT
+
+Account Holder: John Doe
+Account Number: ****4582
+Statement Period: October 1 - October 19, 2025
+Statement Date: ${new Date().toLocaleDateString()}
+
+SUMMARY:
+Opening Balance: $0.00
+Total Income: $${totalIncome.toFixed(2)}
+Total Expenses: $${totalExpenses.toFixed(2)}
+Closing Balance: $${netBalance.toFixed(2)}
+
+TRANSACTION DETAILS:
+${transactions.map(t => `
+Date: ${t.date} ${t.time}
+Description: ${t.name}
+Merchant: ${t.merchant}
+Category: ${t.category}
+Amount: ${t.amount > 0 ? '+' : ''}$${t.amount.toFixed(2)}
+Status: ${t.status}
+`).join('')}
+
+This statement was generated on ${new Date().toLocaleString()}
+For any questions, please contact customer service.
+
+Rory Bank - Modern Banking
+    `.trim();
+
+    // Create and download file
+    const blob = new Blob([statementContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `RoryBank_Statement_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
 
   const accountData = {
     "1": {
       name: "Current Account",
       number: "****4582",
       fullNumber: "5678 9012 2341",
-      balance: 12345.67,
-      availableBalance: 3500,
+      balance: 3475.25,
+      availableBalance: 3475.25,
       type: "Current",
       openedDate: "Oct 15, 2025",
       creditLimit: undefined,
@@ -52,16 +112,15 @@ export default function AccountDetailsPage() {
   const account = accountData[params.id as keyof typeof accountData] || accountData["1"];
 
   const allTransactions = [
-    { id: 1, name: "Starbucks Coffee", amount: -5.67, date: "Oct 19, 2025", time: "10:30 AM", category: "Food & Drink", status: "completed", merchant: "Starbucks #4523" },
-    { id: 2, name: "Whole Foods Market", amount: -156.43, date: "Oct 18, 2025", time: "6:45 PM", category: "Groceries", status: "completed", merchant: "Whole Foods Market" },
-    { id: 3, name: "Netflix Subscription", amount: -15.99, date: "Oct 18, 2025", time: "12:00 AM", category: "Entertainment", status: "completed", merchant: "Netflix.com" },
-    { id: 4, name: "Shell Gas Station", amount: -45.20, date: "Oct 17, 2025", time: "8:15 AM", category: "Transportation", status: "completed", merchant: "Shell #7891" },
- ];
+    { id: 3, name: "Cheque Deposit", amount: 3000000.00, date: "Oct 21, 2025", time: "9:00 AM", merchant: "H & G Group of Company #7927", type: "deposit" },
+    { id: 1, name: "Bank Service", amount: -24.75, date: "Oct 20, 2025", time: "10:30 AM", merchant: "Service Charge #4523", type: "withdrawal" },
+    { id: 2, name: "Cash Deposit", amount: 3500.00, date: "Oct 18, 2025", time: "9:00 AM", merchant: "Lina Wills #4329", type: "deposit" },
+  ];
 
   const filteredTransactions = allTransactions.filter(t => {
     if (selectedFilter === "all") return true;
-    if (selectedFilter === "income") return t.amount > 0;
-    if (selectedFilter === "expenses") return t.amount < 0;
+    if (selectedFilter === "deposit") return t.type === "deposit";
+    if (selectedFilter === "withdrawal") return t.type === "withdrawal";
     return true;
   });
 
@@ -75,9 +134,83 @@ export default function AccountDetailsPage() {
 
   return (
     <AuthWrapper>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">Rory Bank</h1>
+              <p className="text-xs text-slate-500">Online Banking</p>
+            </div>
+          </div>
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2">
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+            <div className="bg-white w-64 h-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">Rory Bank</h1>
+                  <p className="text-xs text-slate-500">Online Banking</p>
+                </div>
+              </div>
+
+              <nav className="space-y-2">
+                <button onClick={() => router.push('/dashboard')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 font-medium">
+                  <Home className="w-5 h-5" />
+                  Dashboard
+                </button>
+                <button onClick={() => router.push('/transfer')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Send className="w-5 h-5" />
+                  Transfer
+                </button>
+                <a href="/transactions" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Receipt className="w-5 h-5" />
+                  Transactions
+                </a>
+                <button onClick={() => router.push('/forex')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Globe className="w-5 h-5" />
+                  Forex Rates
+                </button>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <BarChart3 className="w-5 h-5" />
+                  Analytics
+                </button>
+                <button onClick={() => router.push('/contact')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <MessageCircle className="w-5 h-5" />
+                  Contact
+                </button>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Settings className="w-5 h-5" />
+                  Settings
+                </button>
+              </nav>
+
+              <div className="absolute bottom-6 left-6 right-6">
+                <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
+                  <p className="text-sm font-medium mb-1">Need Help?</p>
+                  <p className="text-xs opacity-90 mb-3">Contact our support team</p>
+                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
+                    Get Support
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => router.push('/dashboard')}>
           <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
             <Building2 className="w-6 h-6 text-white" />
@@ -95,9 +228,9 @@ export default function AccountDetailsPage() {
           </button>
        
             <button onClick={() => router.push('/transfer')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-              <Send className="w-5 h-5" />
-              Transfer
-            </button>
+            <Send className="w-5 h-5" />
+            Transfer
+          </button>
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
             <Receipt className="w-5 h-5" />
             Transactions
@@ -132,10 +265,10 @@ export default function AccountDetailsPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="ml-64 p-8">
+        <main className="lg:ml-64 p-4 lg:p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-        <div>
+          <div>
             <h2 className="text-3xl font-bold text-slate-900">Welcome back, John</h2>
             <p className="text-slate-600 mt-1">Here's what's happening with your money today</p>
           </div>
@@ -150,7 +283,7 @@ export default function AccountDetailsPage() {
             <div className="relative group">
               <Avatar className="cursor-pointer">
                 <AvatarFallback className="bg-amber-600 text-white">JD</AvatarFallback>
-              </Avatar>
+            </Avatar>
               <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="p-2">
                   <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
@@ -172,19 +305,19 @@ export default function AccountDetailsPage() {
         </div>
 
         {/* Account Overview Cards */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
           <Card className="bg-gradient-to-br from-amber-600 to-orange-700 text-white border-0">
             <CardHeader className="pb-3">
               <CardDescription className="text-amber-100">
                 Available Balance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
               <div className="text-3xl font-bold">
-                ${Math.abs(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </div>
-            </CardContent>
-          </Card>
+                  ${Math.abs(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </div>
+              </CardContent>
+            </Card>
 
         
 
@@ -193,13 +326,13 @@ export default function AccountDetailsPage() {
          
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Transactions Section */}
-          <div className="col-span-2 space-y-6">
-            <Card className="bg-white">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
+          <div className="lg:col-span-2 space-y-6">
+        <Card className="bg-white">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
                     <CardTitle>Transaction History</CardTitle>
                     <CardDescription>All transactions for this account</CardDescription>
                   </div>
@@ -208,14 +341,14 @@ export default function AccountDetailsPage() {
                       <Filter className="w-4 h-4 mr-2" />
                       Filter
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={generateStatement}>
                       <Download className="w-4 h-4 mr-2" />
-                      Export
+                      Download Statement
                     </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
                 <div className="flex items-center gap-2 mb-6">
                   <Button
                     variant={selectedFilter === "all" ? "default" : "outline"}
@@ -226,20 +359,20 @@ export default function AccountDetailsPage() {
                     All
                   </Button>
                   <Button
-                    variant={selectedFilter === "income" ? "default" : "outline"}
+                    variant={selectedFilter === "deposit" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setSelectedFilter("income")}
-                    className={selectedFilter === "income" ? "bg-amber-600 hover:bg-amber-700" : ""}
+                    onClick={() => setSelectedFilter("deposit")}
+                    className={selectedFilter === "deposit" ? "bg-amber-600 hover:bg-amber-700" : ""}
                   >
-                    Income
+                    Deposit
                   </Button>
                   <Button
-                    variant={selectedFilter === "expenses" ? "default" : "outline"}
+                    variant={selectedFilter === "withdrawal" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setSelectedFilter("expenses")}
-                    className={selectedFilter === "expenses" ? "bg-amber-600 hover:bg-amber-700" : ""}
+                    onClick={() => setSelectedFilter("withdrawal")}
+                    className={selectedFilter === "withdrawal" ? "bg-amber-600 hover:bg-amber-700" : ""}
                   >
-                    Expenses
+                    Withdrawal
                   </Button>
                 </div>
 
@@ -250,34 +383,36 @@ export default function AccountDetailsPage() {
                       className="p-4 rounded-lg hover:bg-slate-50 transition-colors border border-slate-100 cursor-pointer"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                            transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
-                          }`}>
-                            {transaction.amount > 0 ? (
-                              <ArrowDownLeft className="w-5 h-5 text-amber-700" />
-                            ) : (
-                              <ArrowUpRight className="w-5 h-5 text-slate-600" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">{transaction.name}</p>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        transaction.type === "deposit" ? "bg-green-100" : "bg-red-100"
+                      }`}>
+                        {transaction.type === "deposit" ? (
+                          <ArrowDownLeft className="w-5 h-5 text-green-700" />
+                        ) : (
+                          <ArrowUpRight className="w-5 h-5 text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">{transaction.name}</p>
                             <p className="text-sm text-slate-500">{transaction.merchant}</p>
                             <p className="text-xs text-slate-400 mt-1">
                               {transaction.date} at {transaction.time}
                             </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <Badge variant="secondary" className="bg-slate-100 text-slate-600">
-                            {transaction.category}
-                          </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Badge variant="secondary" className={`${
+                        transaction.type === "deposit" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}>
+                        {transaction.type === "deposit" ? "Deposit" : "Withdrawal"}
+                      </Badge>
                           <p className={`font-semibold text-lg min-w-[120px] text-right ${
-                            transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
-                          }`}>
-                            {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
-                          </p>
-                        </div>
+                        transaction.type === "deposit" ? "text-green-700" : "text-red-600"
+                      }`}>
+                        {transaction.type === "deposit" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                      </p>
+                    </div>
                       </div>
                     </div>
                   ))}
@@ -293,7 +428,7 @@ export default function AccountDetailsPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+                    </div>
 
           {/* Sidebar - Account Details & Statements */}
           <div className="space-y-6">
@@ -306,13 +441,13 @@ export default function AccountDetailsPage() {
                 <div>
                   <p className="text-sm text-slate-500">Account Number</p>
                   <p className="font-medium text-slate-900">{account.fullNumber}</p>
-                </div>
+                  </div>
               
                 <div>
                   <p className="text-sm text-slate-500">Account Type</p>
                   <p className="font-medium text-slate-900 capitalize">{account.type}</p>
-                </div>
-                <div>
+                      </div>
+                      <div>
                   <p className="text-sm text-slate-500">Opened On</p>
                   <p className="font-medium text-slate-900">{account.openedDate}</p>
                 </div>
@@ -367,8 +502,8 @@ export default function AccountDetailsPage() {
                   <Settings className="w-4 h-4 mr-2" />
                   Account Settings
                 </Button>
-              </CardContent>
-            </Card>
+          </CardContent>
+        </Card>
           </div>
         </div>
       </main>
