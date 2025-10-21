@@ -106,7 +106,7 @@ Rory Bank - Modern Banking
       openedDate: "Jan 15, 2020",
       interestRate: "0.01%",
       routing: "021000021",
-      creditLimit: undefined,
+      creditLimit: 0,
       dueDate: undefined
     }
   };
@@ -352,9 +352,9 @@ Rory Bank - Modern Banking
               <TrendingUp className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₵{account.creditLimit ? account.creditLimit.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}</div>
+              <div className="text-2xl font-bold">₵{account.creditLimit > 0 ? account.creditLimit.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}</div>
               <p className="text-xs text-slate-600">
-                {account.creditLimit ? 'Available credit' : 'No credit limit'}
+                {account.creditLimit > 0 ? 'Available credit' : 'No credit limit'}
               </p>
             </CardContent>
           </Card>
