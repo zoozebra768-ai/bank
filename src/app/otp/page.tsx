@@ -13,10 +13,10 @@ import {
   Mail
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { verifyOTP, isValidOTPFormat, createOTPData, sendOTPEmail, type OTPData } from "@/lib/otp";
 
-export default function OTPVerificationPage() {
+function OTPVerificationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [otp, setOtp] = useState("");
@@ -24,7 +24,7 @@ export default function OTPVerificationPage() {
   const [isResendingOTP, setIsResendingOTP] = useState(false);
   const [error, setError] = useState("");
   const [otpData, setOtpData] = useState<OTPData | null>(null);
-  const [userData, setUserData] = useState<{ name: string; email: string; phone: string } | null>(null);
+  const [userData, setUserData] = useState<{ name: string; email: string; phone: string; role: string } | null>(null);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
 
   useEffect(() => {
@@ -276,5 +276,20 @@ export default function OTPVerificationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OTPVerificationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <OTPVerificationContent />
+    </Suspense>
   );
 }

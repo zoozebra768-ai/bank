@@ -50,7 +50,7 @@ export default function TransferPage() {
     { id: "2", name: "Savings Account", number: "****1234", balance: 45574.25 }
   ];
 
-  const recentRecipients = [
+  const recentRecipients: Array<{ name: string; account: string; bank: string }> = [
   
   ];
 

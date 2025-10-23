@@ -25,7 +25,7 @@ export default function LandingPage() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string; role?: string } | null>(null);
 
   useEffect(() => {
     // Check if user is logged in
