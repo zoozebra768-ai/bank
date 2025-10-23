@@ -37,7 +37,7 @@ export default function AccountDetailsPage() {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
   useEffect(() => {
     // Get user data from localStorage

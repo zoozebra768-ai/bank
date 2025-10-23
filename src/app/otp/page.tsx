@@ -24,7 +24,7 @@ export default function OTPVerificationPage() {
   const [isResendingOTP, setIsResendingOTP] = useState(false);
   const [error, setError] = useState("");
   const [otpData, setOtpData] = useState<OTPData | null>(null);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<{ name: string; email: string; phone: string } | null>(null);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
 
   useEffect(() => {
