@@ -28,10 +28,12 @@ import {
   CheckCircle,
   AlertCircle,
   Menu,
-  X
+  X,
+  ChevronLeft
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function TransferPage() {
   const router = useRouter();
@@ -49,9 +51,7 @@ export default function TransferPage() {
   ];
 
   const recentRecipients = [
-    { name: "Sarah Johnson", account: "****7890", bank: "First National Bank" },
-    { name: "Mike Chen", account: "****4567", bank: "Chase Bank" },
-    { name: "Emily Davis", account: "****2345", bank: "Wells Fargo" }
+  
   ];
 
   const handleTransfer = () => {
@@ -192,8 +192,11 @@ export default function TransferPage() {
           </div>
         </aside>
 
+
+
+
         {/* Main Content */}
-        <main className="lg:ml-64 p-4 lg:p-8">
+        <main className="lg:ml-64 p-4 lg:p-8 min-h-screen overflow-y-auto pb-20">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -204,18 +207,14 @@ export default function TransferPage() {
               <button className="p-2 rounded-lg hover:bg-white">
                 <Search className="w-5 h-5 text-slate-600" />
               </button>
-              <button className="p-2 rounded-lg hover:bg-white relative">
-                <Bell className="w-5 h-5 text-slate-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
               <div className="relative group">
-                <div className="w-10 h-10 bg-amber-600 rounded-full flex items-center justify-center cursor-pointer">
-                  <span className="text-white font-medium text-sm">JD</span>
-                </div>
+                <Avatar className="cursor-pointer">
+                  <AvatarFallback className="bg-amber-600 text-white">LG</AvatarFallback>
+                </Avatar>
                 <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <div className="p-2">
                     <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
-                      John Doe
+                      Lisaglenn
                     </div>
                     <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
                       Profile Settings
@@ -393,14 +392,14 @@ export default function TransferPage() {
                     <ArrowUpRight className="w-4 h-4 mr-2" />
                     Send Money
                   </Button>
-                  <Button className="w-full bg-white/20 text-white hover:bg-white/30 border-0">
+                  {/* <Button className="w-full bg-white/20 text-white hover:bg-white/30 border-0">
                     <ArrowDownLeft className="w-4 h-4 mr-2" />
                     Request Money
                   </Button>
                   <Button className="w-full bg-white/20 text-white hover:bg-white/30 border-0">
                     <Calendar className="w-4 h-4 mr-2" />
                     Schedule Transfer
-                  </Button>
+                  </Button> */}
                 </CardContent>
               </Card>
             </div>

@@ -18,11 +18,33 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function LandingPage() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userData = localStorage.getItem('user');
+    
+    setIsLoggedIn(loggedIn);
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('user');
+    setIsLoggedIn(false);
+    setUser(null);
+    router.push('/');
+  };
 
   const features = [
     {
@@ -92,9 +114,41 @@ export default function LandingPage() {
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              <Button onClick={() => router.push('/login')} className="font-bold bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white" style={{fontFamily: 'Poppins, sans-serif'}}>
-                Log In
-              </Button>
+              {isLoggedIn ? (
+                <div className="flex items-center gap-4">
+                  <span className="text-slate-600 font-medium">Welcome, {user?.name}</span>
+                  <div className="relative group">
+                    <Avatar className="cursor-pointer">
+                      <AvatarFallback className="bg-amber-600 text-white">
+                        {user?.name?.split(' ').map((n: string) => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                      <div className="p-2">
+                        <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
+                          {user?.name}
+                        </div>
+                        <button 
+                          onClick={() => router.push('/dashboard')}
+                          className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded"
+                        >
+                          Dashboard
+                        </button>
+                        <button 
+                          onClick={handleLogout}
+                          className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded"
+                        >
+                          Logout
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Button onClick={() => router.push('/login')} className="font-bold bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white" style={{fontFamily: 'Poppins, sans-serif'}}>
+                  Log In
+                </Button>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -112,7 +166,21 @@ export default function LandingPage() {
               <a href="#about" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>About</a>
               <a href="/contact" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Contact</a>
               <div className="flex flex-col gap-2 pt-4">
-                <Button onClick={() => router.push('/login')} className="font-bold bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white" style={{fontFamily: 'Poppins, sans-serif'}}>Log In</Button>
+                {isLoggedIn ? (
+                  <>
+                    <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
+                      Welcome, {user?.name}
+                    </div>
+                    <Button onClick={() => router.push('/dashboard')} className="font-bold bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white" style={{fontFamily: 'Poppins, sans-serif'}}>
+                      Dashboard
+                    </Button>
+                    <Button onClick={handleLogout} variant="outline" className="font-bold text-red-600 border-red-200 hover:bg-red-50" style={{fontFamily: 'Poppins, sans-serif'}}>
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={() => router.push('/login')} className="font-bold bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white" style={{fontFamily: 'Poppins, sans-serif'}}>Log In</Button>
+                )}
               </div>
             </div>
           )}
@@ -136,7 +204,7 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-lg h-14"
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push(isLoggedIn ? '/dashboard' : '/login')}
                 >
                   Go to Account
                   <ArrowRight className="w-5 h-5 ml-2" />

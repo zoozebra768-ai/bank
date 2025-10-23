@@ -39,6 +39,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { transactions, getTotalIncome, getTotalExpenses } from "@/lib/transactions";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function TransactionsPage() {
   const router = useRouter();
@@ -49,15 +51,8 @@ export default function TransactionsPage() {
 
   // Statement generation function
   const generateStatement = () => {
-    const transactions = [
-      { id: 1, name: "Starbucks Coffee", amount: -5.67, date: "Oct 19, 2025", time: "10:30 AM", category: "Food & Drink", status: "completed", merchant: "Starbucks #4523" },
-      { id: 2, name: "Whole Foods Market", amount: -156.43, date: "Oct 18, 2025", time: "6:45 PM", category: "Groceries", status: "completed", merchant: "Whole Foods Market" },
-      { id: 3, name: "Netflix Subscription", amount: -15.99, date: "Oct 18, 2025", time: "12:00 AM", category: "Entertainment", status: "completed", merchant: "Netflix.com" },
-      { id: 4, name: "Shell Gas Station", amount: -45.20, date: "Oct 17, 2025", time: "8:15 AM", category: "Transportation", status: "completed", merchant: "Shell #7891" },
-    ];
-
-    const totalIncome = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
-    const totalExpenses = Math.abs(transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0));
+    const totalIncome = getTotalIncome();
+    const totalExpenses = getTotalExpenses();
     const netBalance = totalIncome - totalExpenses;
 
     // Create statement content
@@ -65,7 +60,7 @@ export default function TransactionsPage() {
 RORY BANK
 TRANSACTION STATEMENT
 
-Account Holder: John Doe
+Account Holder: Lisaglenn
 Account Number: ****4582
 Statement Period: October 1 - October 19, 2025
 Statement Date: ${new Date().toLocaleDateString()}
@@ -104,12 +99,7 @@ Rory Bank - Modern Banking
     window.URL.revokeObjectURL(url);
   };
 
-  const allTransactions = [
-    { id: 1, name: "Starbucks Coffee", amount: -5.67, date: "Oct 19, 2025", time: "10:30 AM", category: "Food & Drink", status: "completed", merchant: "Starbucks #4523" },
-    { id: 2, name: "Whole Foods Market", amount: -156.43, date: "Oct 18, 2025", time: "6:45 PM", category: "Groceries", status: "completed", merchant: "Whole Foods Market" },
-    { id: 3, name: "Netflix Subscription", amount: -15.99, date: "Oct 18, 2025", time: "12:00 AM", category: "Entertainment", status: "completed", merchant: "Netflix.com" },
-    { id: 4, name: "Shell Gas Station", amount: -45.20, date: "Oct 17, 2025", time: "8:15 AM", category: "Transportation", status: "completed", merchant: "Shell #7891" },
-  ];
+  const allTransactions = transactions;
 
   const filteredTransactions = allTransactions.filter(t => {
     let matchesFilter = true;
@@ -274,28 +264,43 @@ Rory Bank - Modern Banking
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-64 p-4 lg:p-8">
+      <main className="lg:ml-64 p-4 lg:p-8 min-h-screen overflow-y-auto pb-20">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => router.back()}>
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h2 className="text-3xl font-bold text-slate-900">Transaction History</h2>
-              <p className="text-slate-600 mt-1">View and manage all your transactions</p>
-            </div>
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900">Transaction History</h2>
+            <p className="text-slate-600 mt-1">View and manage all your transactions</p>
           </div>
           <div className="flex items-center gap-4">
             <button className="p-2 rounded-lg hover:bg-white">
               <Search className="w-5 h-5 text-slate-600" />
             </button>
-            <button className="p-2 rounded-lg hover:bg-white relative">
-              <Bell className="w-5 h-5 text-slate-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <div className="relative group">
+                <Avatar className="cursor-pointer">
+                  <AvatarFallback className="bg-amber-600 text-white">LG</AvatarFallback>
+                </Avatar>
+              <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="p-2">
+                  <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
+                    Lisaglenn
+                  </div>
+                  <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
+                    Profile Settings
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
+                    Account Settings
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded">
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+
+        
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-8">
@@ -433,12 +438,12 @@ Rory Bank - Modern Banking
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
+                        transaction.type === "deposit" ? "bg-green-100" : "bg-red-100"
                       }`}>
-                        {transaction.amount > 0 ? (
-                          <ArrowDownLeft className="w-5 h-5 text-amber-700" />
+                        {transaction.type === "deposit" ? (
+                          <ArrowDownLeft className="w-5 h-5 text-green-700" />
                         ) : (
-                          <ArrowUpRight className="w-5 h-5 text-slate-600" />
+                          <ArrowUpRight className="w-5 h-5 text-red-700" />
                         )}
                       </div>
                       <div>
@@ -450,13 +455,15 @@ Rory Bank - Modern Banking
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+                      <Badge variant="secondary" className={`${
+                        transaction.type === "deposit" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}>
                         {transaction.category}
                       </Badge>
                       <p className={`font-semibold text-lg min-w-[120px] text-right ${
-                        transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
+                        transaction.type === "deposit" ? "text-green-700" : "text-red-700"
                       }`}>
-                        {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
+                        {transaction.type === "deposit" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
                       </p>
                       <Button variant="ghost" size="sm">
                         <Eye className="w-4 h-4" />

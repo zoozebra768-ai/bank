@@ -30,13 +30,28 @@ import {
   X
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function AccountDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Get user data from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('user');
+    router.push('/');
+  };
 
   // Statement generation function
   const generateStatement = () => {
@@ -265,37 +280,46 @@ Rory Bank - Modern Banking
       </aside>
 
       {/* Main Content */}
-        <main className="lg:ml-64 p-4 lg:p-8">
+        <main className="lg:ml-64 p-4 lg:p-8 min-h-screen overflow-y-auto pb-20">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900">Welcome back, John</h2>
+            <h2 className="text-3xl font-bold text-slate-900">Welcome back, Lisaglenn</h2>
             <p className="text-slate-600 mt-1">Here's what's happening with your money today</p>
           </div>
           <div className="flex items-center gap-4">
             <button className="p-2 rounded-lg hover:bg-white">
               <Search className="w-5 h-5 text-slate-600" />
             </button>
-            <button className="p-2 rounded-lg hover:bg-white relative">
+            {/* <button className="p-2 rounded-lg hover:bg-white relative">
               <Bell className="w-5 h-5 text-slate-600" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            </button> */}
             <div className="relative group">
               <Avatar className="cursor-pointer">
-                <AvatarFallback className="bg-amber-600 text-white">JD</AvatarFallback>
-            </Avatar>
+                <AvatarFallback className="bg-amber-600 text-white">LG</AvatarFallback>
+              </Avatar>
               <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="p-2">
                   <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
-                    John Doe
+                    Lisaglenn
                   </div>
-                  <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
+                  <button 
+                    onClick={() => router.push('/accounts/1')}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded"
+                  >
                     Profile Settings
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
+                  <button 
+                    onClick={() => router.push('/accounts/1')}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded"
+                  >
                     Account Settings
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded"
+                  >
                     Logout
                   </button>
                 </div>

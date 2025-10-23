@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -31,24 +32,19 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { transactions, getTotalIncome, getTotalExpenses } from "@/lib/transactions";
 
 export default function AccountDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Statement generation function
   const generateStatement = () => {
-    const transactions = [
-      { id: 1, name: "Starbucks Coffee", amount: -5.67, date: "Oct 19, 2025", time: "10:30 AM", category: "Food & Drink", status: "completed", merchant: "Starbucks #4523" },
-      { id: 2, name: "Whole Foods Market", amount: -156.43, date: "Oct 18, 2025", time: "6:45 PM", category: "Groceries", status: "completed", merchant: "Whole Foods Market" },
-      { id: 3, name: "Netflix Subscription", amount: -15.99, date: "Oct 18, 2025", time: "12:00 AM", category: "Entertainment", status: "completed", merchant: "Netflix.com" },
-      { id: 4, name: "Shell Gas Station", amount: -45.20, date: "Oct 17, 2025", time: "8:15 AM", category: "Transportation", status: "completed", merchant: "Shell #7891" },
-    ];
-
-    const totalIncome = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
-    const totalExpenses = Math.abs(transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0));
+    const totalIncome = getTotalIncome();
+    const totalExpenses = getTotalExpenses();
     const netBalance = totalIncome - totalExpenses;
 
     // Create statement content
@@ -56,7 +52,7 @@ export default function AccountDetailsPage() {
 RORY BANK
 ACCOUNT STATEMENT
 
-Account Holder: John Doe
+Account Holder: Lisaglenn
 Account Number: ****4582
 Statement Period: October 1 - October 19, 2025
 Statement Date: ${new Date().toLocaleDateString()}
@@ -113,63 +109,25 @@ Rory Bank - Modern Banking
 
   const account = accountData[params.id as keyof typeof accountData] || accountData["1"];
 
-  const transactions = [
-    {
-      id: 1,
-      type: "income",
-      description: "Salary Deposit",
-      amount: 3500.00,
-      date: "2024-01-15",
-      category: "Salary"
-    },
-    {
-      id: 2,
-      type: "expense",
-      description: "Grocery Store",
-      amount: -125.50,
-      date: "2024-01-14",
-      category: "Food"
-    },
-    {
-      id: 3,
-      type: "income",
-      description: "Freelance Payment",
-      amount: 850.00,
-      date: "2024-01-13",
-      category: "Freelance"
-    },
-    {
-      id: 4,
-      type: "expense",
-      description: "Electric Bill",
-      amount: -89.99,
-      date: "2024-01-12",
-      category: "Utilities"
-    },
-    {
-      id: 5,
-      type: "expense",
-      description: "Coffee Shop",
-      amount: -12.75,
-      date: "2024-01-11",
-      category: "Food"
-    }
-  ];
+  const allTransactions = transactions;
 
   const filteredTransactions = transactions.filter(transaction => {
-    if (selectedFilter === "all") return true;
-    if (selectedFilter === "income") return transaction.type === "income";
-    if (selectedFilter === "expense") return transaction.type === "expense";
-    return true;
+    // Filter by type
+    let typeMatch = true;
+    if (selectedFilter === "income") typeMatch = transaction.type === "deposit";
+    if (selectedFilter === "expense") typeMatch = transaction.type === "withdrawal";
+    
+    // Filter by search query
+    const searchMatch = searchQuery === "" || 
+      transaction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.category.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return typeMatch && searchMatch;
   });
 
-  const totalIncome = transactions
-    .filter(t => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpenses = Math.abs(transactions
-    .filter(t => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0));
+  const totalIncome = getTotalIncome();
+  const totalExpenses = getTotalExpenses();
 
   return (
     <AuthWrapper>
@@ -313,21 +271,38 @@ Rory Bank - Modern Banking
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-64 p-4 lg:p-8">
+      <main className="lg:ml-64 p-4 lg:p-8 min-h-screen overflow-y-auto pb-20">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-            <div>
-            <h2 className="text-3xl font-bold text-slate-900">Welcome back, John</h2>
-            <p className="text-slate-600 mt-1">Here's what's happening with your money today</p>
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900">Account Details</h2>
+            <p className="text-slate-600 mt-1">Manage your account and view transaction history</p>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Bell className="w-4 h-4" />
-              Notifications
-            </Button>
-            <Avatar className="w-10 h-10">
-              <AvatarFallback className="bg-amber-600 text-white">JD</AvatarFallback>
-            </Avatar>
+            <button className="p-2 rounded-lg hover:bg-white">
+              <Search className="w-5 h-5 text-slate-600" />
+            </button>
+            <div className="relative group">
+              <Avatar className="cursor-pointer">
+                <AvatarFallback className="bg-amber-600 text-white">LG</AvatarFallback>
+              </Avatar>
+              <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="p-2">
+                  <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
+                    Lisaglenn
+                  </div>
+                  <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
+                    Profile Settings
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
+                    Account Settings
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded">
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -462,27 +437,39 @@ Rory Bank - Modern Banking
             </div>
           </CardHeader>
           <CardContent>
+            {/* Search Input */}
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Input
+                  placeholder="Search transactions by name, merchant, or category..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
             <div className="space-y-4">
                   {filteredTransactions.map((transaction) => (
                 <div key={transaction.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      transaction.type === 'income' ? 'bg-emerald-100' : 'bg-red-100'
+                      transaction.type === 'deposit' ? 'bg-emerald-100' : 'bg-red-100'
                     }`}>
-                      {transaction.type === 'income' ? (
-                        <ArrowDownLeft className={`w-5 h-5 ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`} />
+                      {transaction.type === 'deposit' ? (
+                        <ArrowDownLeft className="w-5 h-5 text-emerald-600" />
                       ) : (
-                        <ArrowUpRight className={`w-5 h-5 ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`} />
+                        <ArrowUpRight className="w-5 h-5 text-red-600" />
                             )}
                           </div>
                           <div>
-                      <p className="font-medium text-slate-900">{transaction.description}</p>
+                      <p className="font-medium text-slate-900">{transaction.name}</p>
                       <p className="text-sm text-slate-500">{transaction.category} • {transaction.date}</p>
                           </div>
                         </div>
                   <div className="text-right">
-                    <p className={`font-medium ${transaction.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {transaction.type === 'income' ? '+' : ''}₵{Math.abs(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    <p className={`font-medium ${transaction.type === 'deposit' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {transaction.type === 'deposit' ? '+' : ''}₵{Math.abs(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </p>
                       </div>
                     </div>

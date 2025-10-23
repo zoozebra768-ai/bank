@@ -28,9 +28,9 @@ export default function LoginPage() {
   const users = [
     {
       id: "1234567890",
-      email: "john.doe@rorybank.com",
-      password: "password123",
-      name: "John Doe",
+      email: "highhway1@gmail.com",
+      password: "i4cu56725",
+      name: "Lisaglenn",
       role: "Customer"
     },
     {
@@ -52,16 +52,10 @@ export default function LoginPage() {
       const user = users.find(u => (u.email === email || u.id === email) && u.password === password);
       
       if (user) {
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('isLoggedIn', 'true');
-        
-        // Redirect based on role
-        if (user.role === 'Administrator') {
-          router.push('/management');
-        } else { 
-          router.push('/dashboard');
-        }
+        // Redirect to OTP verification page with user data
+        const userParam = encodeURIComponent(JSON.stringify(user));
+        const emailParam = encodeURIComponent(user.email);
+        router.push(`/otp?user=${userParam}&email=${emailParam}`);
       } else {
         setError("Invalid ID/email or password");
       }
