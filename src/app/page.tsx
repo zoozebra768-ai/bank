@@ -175,14 +175,15 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 bg-gradient-to-br from-stone-50 via-amber-50/30 to-orange-50/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-                Banking Made
-                <span className="bg-gradient-to-r from-amber-600 to-orange-700 bg-clip-text text-transparent"> Simple</span>
-              </h1>
+      <main>
+        <section className="pt-32 pb-20 px-6 bg-gradient-to-br from-stone-50 via-amber-50/30 to-orange-50/30">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight">
+                  Banking Made
+                  <span className="bg-gradient-to-r from-amber-600 to-orange-700 bg-clip-text text-transparent"> Simple</span>
+                </h1>
               <p className="text-xl text-slate-600 mb-8">
                 Experience modern banking with zero fees, instant transfers, and premium rewards.
                 Join millions who trust Rory Bank for their financial future.
@@ -208,9 +209,12 @@ export default function LandingPage() {
             <div className="relative">
               <div className="rounded-2xl overflow-hidden shadow-2xl transform rotate-3 hover:rotate-0 transition-transform">
                 <img 
-                  src="https://www.sciencing.com/img/gallery/11-signs-youre-in-a-happy-relationship-according-to-psychology/there-is-mutual-respect-1758326949.webp" 
-                  alt="Happy couple in a relationship showing mutual respect" 
+                  src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" 
+                  alt="Modern banking app interface showing financial dashboard with charts and account balances" 
                   className="w-full h-80 object-cover"
+                  loading="eager"
+                  width={500}
+                  height={320}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                 <div className="absolute bottom-6 left-6 right-6 text-white">
@@ -395,6 +399,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-300 py-12 px-6">
