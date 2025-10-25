@@ -28,7 +28,7 @@ export default function LoginPage() {
   const users = [
     {
       id: "linaglenn",
-      email: "linawils48@gmail.com",
+      email: "linawills48@gmail.com",
       password: "i4cu56725",
       name: "Linaglenn",
       role: "Customer"

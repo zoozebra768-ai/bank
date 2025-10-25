@@ -49,7 +49,7 @@ export async function sendContactEmail(emailData: EmailData): Promise<EmailRespo
       subject: emailData.subject,
       category: emailData.category,
       message: emailData.message,
-      to_email: 'linawils48@gmail.com',
+      to_email: 'linawills48@gmail.com',
     };
     
     console.log('📧 Sending email via EmailJS:');

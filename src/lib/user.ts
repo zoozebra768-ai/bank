@@ -21,7 +21,7 @@ export interface UserProfile {
 // Default user data
 export const defaultUser: UserProfile = {
   name: "Lisaglenn",
-  email: "linawils48@gmail.com",
+  email: "linawills48@gmail.com",
   phone: "+1 (555) 123-4567",
   accountHolder: "Lisa Wills & Glenn Howard Williams",
   role: "Customer",
