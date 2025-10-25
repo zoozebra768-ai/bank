@@ -7,7 +7,7 @@ import path from 'path';
 // POST /api/admin/backup - Create backup
 export async function POST() {
   try {
-    const backupFile = adminBackupTransactions();
+    const backupFile = await adminBackupTransactions();
     
     if (backupFile) {
       return NextResponse.json({ 
@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest) {
     const dataDir = path.join(process.cwd(), 'data');
     const backupFile = path.join(dataDir, filename);
     
-    const success = adminRestoreTransactions(backupFile);
+    const success = await adminRestoreTransactions(filename);
     
     if (success) {
       return NextResponse.json({ success: true, message: 'Backup restored successfully' });
