@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { transactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData } from "@/lib/transactions";
+import { transactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData, type Transaction } from "@/lib/transactions";
 import { generateBankStatementPDF } from "@/lib/pdfStatement";
 import { getUserDisplayName, getUserInitials, clearUserData } from "@/lib/user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -50,7 +50,7 @@ export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleLogout = () => {
@@ -58,7 +58,7 @@ export default function TransactionsPage() {
     router.push('/');
   };
 
-  const handleViewDetails = (transaction: any) => {
+  const handleViewDetails = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setIsModalOpen(true);
   };

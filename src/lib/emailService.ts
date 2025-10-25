@@ -99,8 +99,7 @@ export async function sendOTPEmail(email: string, otp: string): Promise<boolean>
       passcode: otp, // The OTP code
       time: expirationTime.toLocaleString(), // Expiration time
       email: email, // Recipient email
-      logo_url: getEmailLogo('hosted'), // Professional hosted logo
-      logo_svg: getEmailLogo('svg'), // SVG logo for HTML emails
+      logo: getEmailLogo('hosted'), // Logo URL for your template
       company_name: 'Rory Bank',
       support_email: 'support@rorybank.com',
       website_url: 'https://rorybank.com'
@@ -124,12 +123,14 @@ export async function sendOTPEmail(email: string, otp: string): Promise<boolean>
     console.log('OTP email sent successfully:', result);
     return true;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Log error details without throwing
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorObj = error as { message?: string; status?: number; text?: string };
     console.warn('OTP email sending failed, using fallback:', {
-      message: error?.message || 'Unknown error',
-      status: error?.status || 'No status',
-      text: error?.text || 'No text',
+      message: errorMessage,
+      status: errorObj?.status || 'No status',
+      text: errorObj?.text || 'No text',
       serviceId: EMAILJS_CONFIG.serviceId,
       templateId: EMAILJS_CONFIG.otpTemplateId,
       email: email

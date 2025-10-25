@@ -74,8 +74,8 @@ export const EMAIL_LOGO_CONFIG = {
     </svg>
   `).toString('base64'),
   
-  // Hosted logo URL (you can replace this with your actual hosted logo)
-  hostedLogoUrl: 'https://via.placeholder.com/200x60/D97706/FFFFFF?text=Rory+Bank',
+  // Hosted logo URL (simple, clean logo for emails)
+  hostedLogoUrl: 'https://via.placeholder.com/150x40/D97706/FFFFFF?text=Rory+Bank',
   
   // Text-based logo (fallback)
   textLogo: `

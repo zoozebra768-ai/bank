@@ -16,6 +16,12 @@ import { useState, useEffect } from "react";
 import { verifyOTP, isValidOTPFormat, createOTPData, sendOTPEmail, type OTPData } from "@/lib/otp";
 import RoryBankLogo from "@/components/RoryBankLogo";
 
+interface UserData {
+  email: string;
+  role: string;
+  [key: string]: string | undefined;
+}
+
 export default function OTPVerificationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,7 +30,7 @@ export default function OTPVerificationPage() {
   const [isResendingOTP, setIsResendingOTP] = useState(false);
   const [error, setError] = useState("");
   const [otpData, setOtpData] = useState<OTPData | null>(null);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
 
   useEffect(() => {
