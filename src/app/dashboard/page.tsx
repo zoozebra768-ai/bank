@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData } from "@/lib/transactions";
+import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData, type Transaction } from "@/lib/transactions";
 import { generateBankStatementPDF } from "@/lib/pdfStatement";
 import { getUserData, getUserDisplayName, getUserInitials, getUserAccountData, clearUserData } from "@/lib/user";
 import RoryBankLogo from "@/components/RoryBankLogo";
@@ -40,7 +40,7 @@ export default function AccountDetailsPage() {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableBalance, setAvailableBalance] = useState(0);
 

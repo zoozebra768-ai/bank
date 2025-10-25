@@ -45,7 +45,7 @@ export default function ManagementDashboard() {
 
   // Transaction data state
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [backups, setBackups] = useState<any[]>([]);
+  const [backups, setBackups] = useState<{ filename: string; created: string }[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
     amount: '',

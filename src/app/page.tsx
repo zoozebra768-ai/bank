@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { getTransactions } from "@/lib/transactions";
+import { getTransactions, type Transaction } from "@/lib/transactions";
 import { isLoggedIn, getUserData, getUserDisplayName, getUserInitials, clearUserData } from "@/lib/user";
 import RoryBankLogo from "@/components/RoryBankLogo";
 
@@ -27,7 +27,7 @@ export default function LandingPage() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loginStatus, setLoginStatus] = useState(false);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     // Check if user is logged in
