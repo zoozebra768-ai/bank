@@ -55,8 +55,8 @@ export default function ManagementDashboard() {
   const [newTransaction, setNewTransaction] = useState({
     name: "",
     amount: "",
-    date: "",
-    time: "",
+    date: new Date().toISOString().split('T')[0], // Today's date
+    time: new Date().toTimeString().slice(0, 5), // Current time HH:MM
     category: "",
     merchant: "",
     status: "Processed",
@@ -108,8 +108,8 @@ export default function ManagementDashboard() {
   };
 
   const handleAddTransaction = async () => {
-    if (!newTransaction.name || !newTransaction.amount) {
-      setMessage("Name and amount are required");
+    if (!newTransaction.name || !newTransaction.amount || !newTransaction.category || !newTransaction.merchant) {
+      setMessage("Name, amount, category, and merchant are required");
       return;
     }
 
@@ -127,8 +127,8 @@ export default function ManagementDashboard() {
         setNewTransaction({
           name: "",
           amount: "",
-          date: "",
-          time: "",
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().slice(0, 5),
           category: "",
           merchant: "",
           status: "Processed",

@@ -111,6 +111,9 @@ export default function LandingPage() {
               <a href="/forex" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Forex Rates</a>
               <a href="#about" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>About</a>
               <a href="/contact" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Contact</a>
+              {loginStatus && (
+                <a href="/management" className="text-slate-600 hover:text-amber-700 transition-colors font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Management</a>
+              )}
             </div>
 
             <div className="hidden md:flex items-center gap-4">
@@ -165,6 +168,9 @@ export default function LandingPage() {
               <a href="/forex" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Forex Rates</a>
               <a href="#about" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>About</a>
               <a href="/contact" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Contact</a>
+              {loginStatus && (
+                <a href="/management" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Management</a>
+              )}
               <div className="flex flex-col gap-2 pt-4">
                 {loginStatus ? (
                   <>

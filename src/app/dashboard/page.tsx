@@ -26,7 +26,8 @@ import {
   Globe,
   MessageCircle,
   Menu,
-  X
+  X,
+  Shield
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -144,7 +145,7 @@ export default function AccountDetailsPage() {
                   Settings
                 </button>
                 <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <BarChart3 className="w-5 h-5" />
+                  <Shield className="w-5 h-5" />
                   Management
                 </button>
               </nav>
@@ -195,7 +196,7 @@ export default function AccountDetailsPage() {
             Settings
           </button>
           <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-            <BarChart3 className="w-5 h-5" />
+            <Shield className="w-5 h-5" />
             Management
           </button>
         </nav>

@@ -412,13 +412,25 @@ export default function TransactionsPage() {
                       Showing {filteredTransactions.length} of {allTransactions.length} transactions
                     </CardDescription>
                   </div>
-                  <Button
-                    onClick={generateStatement}
-                    className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Statement
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        // TODO: Implement add transaction modal
+                        alert('Add Transaction feature coming soon!');
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Transaction
+                    </Button>
+                    <Button
+                      onClick={generateStatement}
+                      className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Statement
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

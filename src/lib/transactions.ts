@@ -101,7 +101,7 @@ export const getStatementData = async () => {
 // Admin functions for managing transactions
 export const adminAddTransaction = async (transaction: Omit<Transaction, 'id'>) => {
   try {
-    const response = await fetch('/api/transactions', {
+    const response = await fetch('/api/admin/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(transaction)
@@ -116,7 +116,7 @@ export const adminAddTransaction = async (transaction: Omit<Transaction, 'id'>) 
 
 export const adminUpdateTransaction = async (id: number, updates: Partial<Transaction>) => {
   try {
-    const response = await fetch('/api/transactions', {
+    const response = await fetch('/api/admin/transactions', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ...updates })
@@ -131,7 +131,7 @@ export const adminUpdateTransaction = async (id: number, updates: Partial<Transa
 
 export const adminDeleteTransaction = async (id: number) => {
   try {
-    const response = await fetch(`/api/transactions?id=${id}`, {
+    const response = await fetch(`/api/admin/transactions?id=${id}`, {
       method: 'DELETE'
     });
     const result = await response.json();
@@ -164,7 +164,7 @@ export const adminGetNextTransactionId = async () => {
 
 export const adminBackupTransactions = async () => {
   try {
-    const response = await fetch('/api/backup', {
+    const response = await fetch('/api/admin/backup', {
       method: 'POST'
     });
     const result = await response.json();
@@ -177,7 +177,7 @@ export const adminBackupTransactions = async () => {
 
 export const adminRestoreTransactions = async (filename: string) => {
   try {
-    const response = await fetch('/api/backup', {
+    const response = await fetch('/api/admin/backup', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename })
@@ -192,7 +192,7 @@ export const adminRestoreTransactions = async (filename: string) => {
 
 export const adminGetBackups = async () => {
   try {
-    const response = await fetch('/api/backup');
+    const response = await fetch('/api/admin/backup');
     const result = await response.json();
     return result.success ? result.data : [];
   } catch (error) {
