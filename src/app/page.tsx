@@ -209,8 +209,8 @@ export default function LandingPage() {
             <div className="relative">
               <div className="rounded-2xl overflow-hidden shadow-2xl transform rotate-3 hover:rotate-0 transition-transform">
                 <img 
-                  src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" 
-                  alt="Modern banking app interface showing financial dashboard with charts and account balances" 
+                  src="https://www.sciencing.com/img/gallery/11-signs-youre-in-a-happy-relationship-according-to-psychology/there-is-mutual-respect-1758326949.webp" 
+                  alt="Happy couple enjoying financial freedom and mutual respect in their relationship" 
                   className="w-full h-80 object-cover"
                   loading="eager"
                   width={500}
