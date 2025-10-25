@@ -33,7 +33,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData, type Transaction } from "@/lib/transactions";
 import { generateBankStatementPDF } from "@/lib/pdfStatement";
-import { getUserData, getUserDisplayName, getUserInitials, getUserAccountData, clearUserData } from "@/lib/user";
+import { getUserData, getUserDisplayName, getUserInitials, getUserAccountData, clearUserData, getUserRole } from "@/lib/user";
 import RoryBankLogo from "@/components/RoryBankLogo";
 
 export default function AccountDetailsPage() {
@@ -144,10 +144,12 @@ export default function AccountDetailsPage() {
                   <Settings className="w-5 h-5" />
                   Settings
                 </button>
-                <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <Shield className="w-5 h-5" />
-                  Management
-                </button>
+                {getUserRole() === 'Administrator' && (
+                  <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                    <Shield className="w-5 h-5" />
+                    Management
+                  </button>
+                )}
               </nav>
 
               <div className="absolute bottom-6 left-6 right-6">
@@ -195,10 +197,12 @@ export default function AccountDetailsPage() {
             <Settings className="w-5 h-5" />
             Settings
           </button>
-          <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-            <Shield className="w-5 h-5" />
-            Management
-          </button>
+          {getUserRole() === 'Administrator' && (
+            <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+              <Shield className="w-5 h-5" />
+              Management
+            </button>
+          )}
         </nav>
 
         <div className="absolute bottom-6 left-6 right-6">
