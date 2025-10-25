@@ -12,7 +12,7 @@ import {
   Mail
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { verifyOTP, isValidOTPFormat, createOTPData, sendOTPEmail, type OTPData } from "@/lib/otp";
 import RoryBankLogo from "@/components/RoryBankLogo";
 
@@ -22,7 +22,7 @@ interface UserData {
   [key: string]: string | undefined;
 }
 
-export default function OTPVerificationPage() {
+function OTPVerificationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [otp, setOtp] = useState("");
@@ -281,5 +281,22 @@ export default function OTPVerificationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OTPVerificationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-white/80 backdrop-blur-sm border-0 shadow-2xl">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <OTPVerificationContent />
+    </Suspense>
   );
 }
