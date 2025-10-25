@@ -40,36 +40,7 @@ import { getUserRole, clearUserData } from "@/lib/user";
 export default function ManagementDashboard() {
   const router = useRouter();
   
-  // Check if user is admin on mount
-  useEffect(() => {
-    const userRole = getUserRole();
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    
-    if (!isLoggedIn || userRole !== 'Administrator') {
-      // Redirect to home or login if not admin
-      router.push('/dashboard');
-    }
-  }, [router]);
-  
-  // Don't render anything until we check auth
-  const userRole = getUserRole();
-  const isLoggedIn = localStorage.getItem('isLoggedIn');
-  
-  if (!isLoggedIn || userRole !== 'Administrator') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Access Denied</h2>
-            <p className="text-slate-600 mb-6">You must be an administrator to access this page.</p>
-            <Button onClick={() => router.push('/dashboard')}>
-              Go to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // All hooks must be called before any conditional returns
   const [activeTab, setActiveTab] = useState("transactions");
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -127,6 +98,17 @@ export default function ManagementDashboard() {
     loadTransactions();
     loadBackups();
   }, []);
+
+  // Auth check after hooks
+  const userRole = getUserRole();
+  const isLoggedIn = localStorage.getItem('isLoggedIn');
+  
+  // Redirect if not admin
+  useEffect(() => {
+    if (!isLoggedIn || userRole !== 'Administrator') {
+      router.push('/dashboard');
+    }
+  }, [isLoggedIn, userRole, router]);
 
   const loadTransactions = async () => {
     try {
@@ -311,6 +293,23 @@ export default function ManagementDashboard() {
 
   const totalIncome = transactions.filter(t => t.type === "deposit" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = Math.abs(transactions.filter(t => t.type === "withdrawal" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0));
+
+  // Show access denied if not admin
+  if (!isLoggedIn || userRole !== 'Administrator') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Access Denied</h2>
+            <p className="text-slate-600 mb-6">You must be an administrator to access this page.</p>
+            <Button onClick={() => router.push('/dashboard')}>
+              Go to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
