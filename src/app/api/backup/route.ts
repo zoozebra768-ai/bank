@@ -34,7 +34,7 @@ function readTransactions() {
 }
 
 // Write transactions to JSON file
-function writeTransactions(transactions: any[]): boolean {
+function writeTransactions(transactions: unknown[]): boolean {
   try {
     ensureDirectories();
     fs.writeFileSync(TRANSACTIONS_FILE, JSON.stringify(transactions, null, 2));

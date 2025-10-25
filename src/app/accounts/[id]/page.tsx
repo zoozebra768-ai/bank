@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { getTransactions, getTotalIncome, getTotalExpenses } from "@/lib/transactions";
+import { getTransactions, getTotalIncome, getTotalExpenses, type Transaction } from "@/lib/transactions";
 
 export default function AccountDetailsPage() {
   const params = useParams();
@@ -40,7 +40,7 @@ export default function AccountDetailsPage() {
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
