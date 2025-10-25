@@ -31,8 +31,8 @@ import {
   X
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
-import { transactions, getTotalIncome, getTotalExpenses } from "@/lib/transactions";
+import { useState, useEffect } from "react";
+import { getTransactions, getTotalIncome, getTotalExpenses } from "@/lib/transactions";
 
 export default function AccountDetailsPage() {
   const params = useParams();
@@ -40,11 +40,34 @@ export default function AccountDetailsPage() {
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [transactionsData, income, expenses] = await Promise.all([
+        getTransactions(),
+        getTotalIncome(),
+        getTotalExpenses()
+      ]);
+      setTransactions(transactionsData);
+      setTotalIncome(income);
+      setTotalExpenses(expenses);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Statement generation function
   const generateStatement = () => {
-    const totalIncome = getTotalIncome();
-    const totalExpenses = getTotalExpenses();
     const netBalance = totalIncome - totalExpenses;
 
     // Create statement content
@@ -126,9 +149,6 @@ Rory Bank - Modern Banking
     return typeMatch && searchMatch;
   });
 
-  const totalIncome = getTotalIncome();
-  const totalExpenses = getTotalExpenses();
-
   return (
     <AuthWrapper>
       <div className="min-h-screen bg-slate-50">
@@ -195,6 +215,10 @@ Rory Bank - Modern Banking
                   <Settings className="w-5 h-5" />
                   Settings
                 </button>
+                <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <BarChart3 className="w-5 h-5" />
+                  Management
+                </button>
               </nav>
 
               <div className="absolute bottom-6 left-6 right-6">
@@ -255,6 +279,10 @@ Rory Bank - Modern Banking
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
             <Settings className="w-5 h-5" />
             Settings
+          </button>
+          <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+            <BarChart3 className="w-5 h-5" />
+            Management
           </button>
         </nav>
 

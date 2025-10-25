@@ -110,6 +110,10 @@ export default function TransferPage() {
                   <Settings className="w-5 h-5" />
                   Settings
                 </button>
+                <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <BarChart3 className="w-5 h-5" />
+                  Management
+                </button>
               </nav>
 
               <div className="absolute bottom-6 left-6 right-6">
@@ -160,6 +164,10 @@ export default function TransferPage() {
             <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
               <Settings className="w-5 h-5" />
               Settings
+            </button>
+            <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+              <BarChart3 className="w-5 h-5" />
+              Management
             </button>
           </nav>
 

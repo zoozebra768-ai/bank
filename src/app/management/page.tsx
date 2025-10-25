@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Building2,
   ArrowLeft,
   Save,
   Plus,
@@ -27,37 +26,31 @@ import {
   TrendingUp,
   TrendingDown,
   Calendar,
-  DollarSign
+  DollarSign,
+  Download,
+  Upload,
+  RefreshCw
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import RoryBankLogo from "@/components/RoryBankLogo";
+import { type Transaction, adminAddTransaction, adminUpdateTransaction, adminDeleteTransaction, adminBackupTransactions, adminRestoreTransactions, adminGetBackups } from "@/lib/transactions";
 
 export default function ManagementDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("account");
+  const [activeTab, setActiveTab] = useState("transactions");
   const [isEditing, setIsEditing] = useState(false);
-
-  // Account data state
-  const [accountData, setAccountData] = useState({
-    name: "Current Account",
-    number: "****4582",
-    fullNumber: "5678 9012 2341",
-    balance: 12345.67,
-    availableBalance: 12345.67,
-    type: "checking",
-    openedDate: "Jan 15, 2020",
-    interestRate: "0.01%",
-    routing: "021000021"
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   // Transaction data state
-  const [transactions, setTransactions] = useState([
-    { id: 1, name: "Starbucks Coffee", amount: -5.67, date: "Oct 19, 2025", time: "10:30 AM", category: "Food & Drink", merchant: "Starbucks #4523" },
-    { id: 2, name: "Whole Foods Market", amount: -156.43, date: "Oct 18, 2025", time: "6:45 PM", category: "Groceries", merchant: "Whole Foods Market" },
-    { id: 3, name: "Netflix Subscription", amount: -15.99, date: "Oct 18, 2025", time: "12:00 AM", category: "Entertainment", merchant: "Netflix.com" },
-    { id: 4, name: "Salary Deposit", amount: 3500.00, date: "Oct 15, 2025", time: "9:00 AM", category: "Income", merchant: "Employer Direct Deposit" },
-    { id: 5, name: "Amazon Purchase", amount: -89.99, date: "Oct 14, 2025", time: "3:20 PM", category: "Shopping", merchant: "Amazon.com" }
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [backups, setBackups] = useState<any[]>([]);
+  const [editingTransaction, setEditingTransaction] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({
+    amount: '',
+    status: ''
+  });
 
   const [newTransaction, setNewTransaction] = useState({
     name: "",
@@ -65,7 +58,9 @@ export default function ManagementDashboard() {
     date: "",
     time: "",
     category: "",
-    merchant: ""
+    merchant: "",
+    status: "Processed",
+    type: "withdrawal"
   });
 
   const categories = [
@@ -80,52 +75,176 @@ export default function ManagementDashboard() {
     "Cash",
     "Health & Fitness",
     "Insurance",
-    "Housing"
+    "Housing",
+    "Deposit",
+    "Service"
   ];
 
-  const handleAccountUpdate = (field: string, value: string) => {
-    setAccountData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  // Load transactions on component mount
+  useEffect(() => {
+    loadTransactions();
+    loadBackups();
+  }, []);
 
-  const handleSaveAccount = () => {
-    // Here you would typically save to a database
-    console.log("Account data saved:", accountData);
-    setIsEditing(false);
-  };
-
-  const handleAddTransaction = () => {
-    if (newTransaction.name && newTransaction.amount) {
-      const transaction = {
-        id: transactions.length + 1,
-        name: newTransaction.name,
-        amount: parseFloat(newTransaction.amount),
-        date: newTransaction.date || new Date().toLocaleDateString(),
-        time: newTransaction.time || new Date().toLocaleTimeString(),
-        category: newTransaction.category || "Other",
-        merchant: newTransaction.merchant || "Unknown"
-      };
-      
-      setTransactions(prev => [transaction, ...prev]);
-      setNewTransaction({
-        name: "",
-        amount: "",
-        date: "",
-        time: "",
-        category: "",
-        merchant: ""
-      });
+  const loadTransactions = async () => {
+    try {
+      const response = await fetch('/api/transactions');
+      const data = await response.json();
+      if (data.success) {
+        setTransactions(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading transactions:', error);
     }
   };
 
-  const handleDeleteTransaction = (id: number) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  const loadBackups = async () => {
+    try {
+      const backups = await adminGetBackups();
+      setBackups(backups);
+    } catch (error) {
+      console.error('Error loading backups:', error);
+    }
   };
 
-  const totalIncome = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = Math.abs(transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0));
+  const handleAddTransaction = async () => {
+    if (!newTransaction.name || !newTransaction.amount) {
+      setMessage("Name and amount are required");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTransaction)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setTransactions(prev => [data.data, ...prev]);
+        setNewTransaction({
+          name: "",
+          amount: "",
+          date: "",
+          time: "",
+          category: "",
+          merchant: "",
+          status: "Processed",
+          type: "withdrawal"
+        });
+        setMessage("Transaction added successfully");
+      } else {
+        setMessage(data.error || "Failed to add transaction");
+      }
+    } catch (error) {
+      setMessage("Error adding transaction");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this transaction?")) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/transactions?id=${id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setTransactions(prev => prev.filter(t => t.id !== id));
+        setMessage("Transaction deleted successfully");
+      } else {
+        setMessage(data.error || "Failed to delete transaction");
+      }
+    } catch (error) {
+      setMessage("Error deleting transaction");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction.id);
+    setEditForm({
+      amount: transaction.amount.toString(),
+      status: transaction.status
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTransaction) return;
+
+    setIsLoading(true);
+    try {
+      const updates = {
+        amount: parseFloat(editForm.amount),
+        status: editForm.status
+      };
+
+      const result = await adminUpdateTransaction(editingTransaction, updates);
+      if (result) {
+        setMessage("Transaction updated successfully");
+        await loadTransactions();
+        setEditingTransaction(null);
+        setEditForm({ amount: '', status: '' });
+      } else {
+        setMessage("Failed to update transaction");
+      }
+    } catch (error) {
+      setMessage("Error updating transaction");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTransaction(null);
+    setEditForm({ amount: '', status: '' });
+  };
+
+  const handleCreateBackup = async () => {
+    setIsLoading(true);
+    try {
+      const result = await adminBackupTransactions();
+      if (result) {
+        setMessage(`Backup created successfully: ${result.filename}`);
+        await loadBackups();
+      } else {
+        setMessage("Failed to create backup");
+      }
+    } catch (error) {
+      setMessage("Error creating backup");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRestoreBackup = async (filename: string) => {
+    if (!confirm(`Are you sure you want to restore from ${filename}? This will replace all current transactions.`)) return;
+
+    setIsLoading(true);
+    try {
+      const result = await adminRestoreTransactions(filename);
+      if (result) {
+        setMessage("Backup restored successfully");
+        await loadTransactions();
+      } else {
+        setMessage("Failed to restore backup");
+      }
+    } catch (error) {
+      setMessage("Error restoring backup");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const totalIncome = transactions.filter(t => t.type === "deposit" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = Math.abs(transactions.filter(t => t.type === "withdrawal" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -134,11 +253,8 @@ export default function ManagementDashboard() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
+              <RoryBankLogo size="md" />
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Rory Bank</h1>
                 <p className="text-xs text-slate-500">Management Dashboard</p>
               </div>
             </div>
@@ -175,14 +291,6 @@ export default function ManagementDashboard() {
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-8">
           <Button
-            variant={activeTab === "account" ? "default" : "outline"}
-            onClick={() => setActiveTab("account")}
-            className={activeTab === "account" ? "bg-amber-700 hover:bg-amber-800" : ""}
-          >
-            <User className="w-4 h-4 mr-2" />
-            Account Details
-          </Button>
-          <Button
             variant={activeTab === "transactions" ? "default" : "outline"}
             onClick={() => setActiveTab("transactions")}
             className={activeTab === "transactions" ? "bg-amber-700 hover:bg-amber-800" : ""}
@@ -191,12 +299,12 @@ export default function ManagementDashboard() {
             Transactions
           </Button>
           <Button
-            variant={activeTab === "analytics" ? "default" : "outline"}
-            onClick={() => setActiveTab("analytics")}
-            className={activeTab === "analytics" ? "bg-amber-700 hover:bg-amber-800" : ""}
+            variant={activeTab === "backup" ? "default" : "outline"}
+            onClick={() => setActiveTab("backup")}
+            className={activeTab === "backup" ? "bg-amber-700 hover:bg-amber-800" : ""}
           >
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Analytics
+            <Download className="w-4 h-4 mr-2" />
+            Backup & Restore
           </Button>
         </div>
 
@@ -410,6 +518,31 @@ export default function ManagementDashboard() {
                       onChange={(e) => setNewTransaction(prev => ({...prev, time: e.target.value}))}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="transactionStatus">Status</Label>
+                    <Select value={newTransaction.status} onValueChange={(value) => setNewTransaction(prev => ({...prev, status: value}))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Processed">Processed</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Failed">Failed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="transactionType">Type</Label>
+                    <Select value={newTransaction.type} onValueChange={(value) => setNewTransaction(prev => ({...prev, type: value}))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="deposit">Deposit</SelectItem>
+                        <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <Button 
                   onClick={handleAddTransaction}
@@ -430,39 +563,122 @@ export default function ManagementDashboard() {
               <CardContent>
                 <div className="space-y-3">
                   {transactions.map((transaction) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
-                        }`}>
-                          {transaction.amount > 0 ? (
-                            <TrendingUp className="w-5 h-5 text-amber-700" />
-                          ) : (
-                            <TrendingDown className="w-5 h-5 text-slate-600" />
-                          )}
+                    <div key={transaction.id} className="p-4 border border-slate-200 rounded-lg">
+                      {editingTransaction === transaction.id ? (
+                        // Edit Form
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
+                            }`}>
+                              {transaction.amount > 0 ? (
+                                <TrendingUp className="w-5 h-5 text-amber-700" />
+                              ) : (
+                                <TrendingDown className="w-5 h-5 text-slate-600" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-slate-900">{transaction.name}</p>
+                              <p className="text-sm text-slate-500">{transaction.merchant}</p>
+                              <p className="text-xs text-slate-400">{transaction.date} at {transaction.time}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor={`amount-${transaction.id}`}>Amount</Label>
+                              <Input
+                                id={`amount-${transaction.id}`}
+                                type="number"
+                                step="0.01"
+                                value={editForm.amount}
+                                onChange={(e) => setEditForm(prev => ({...prev, amount: e.target.value}))}
+                                placeholder="Enter amount"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`status-${transaction.id}`}>Status</Label>
+                              <Select value={editForm.status} onValueChange={(value) => setEditForm(prev => ({...prev, status: value}))}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Processed">Processed</SelectItem>
+                                  <SelectItem value="Pending">Pending</SelectItem>
+                                  <SelectItem value="Failed">Failed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={handleSaveEdit}
+                              disabled={isLoading}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Save className="w-4 h-4 mr-2" />
+                              Save Changes
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={handleCancelEdit}
+                              disabled={isLoading}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-slate-900">{transaction.name}</p>
-                          <p className="text-sm text-slate-500">{transaction.merchant}</p>
-                          <p className="text-xs text-slate-400">{transaction.date} at {transaction.time}</p>
+                      ) : (
+                        // Display Mode
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
+                            }`}>
+                              {transaction.amount > 0 ? (
+                                <TrendingUp className="w-5 h-5 text-amber-700" />
+                              ) : (
+                                <TrendingDown className="w-5 h-5 text-slate-600" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-900">{transaction.name}</p>
+                              <p className="text-sm text-slate-500">{transaction.merchant}</p>
+                              <p className="text-xs text-slate-400">{transaction.date} at {transaction.time}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <Badge variant="secondary">{transaction.category}</Badge>
+                            <Badge variant={transaction.status === 'Processed' ? 'default' : transaction.status === 'Pending' ? 'secondary' : 'destructive'}>
+                              {transaction.status}
+                            </Badge>
+                            <p className={`font-semibold ${
+                              transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
+                            }`}>
+                              {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditTransaction(transaction)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteTransaction(transaction.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="secondary">{transaction.category}</Badge>
-                        <p className={`font-semibold ${
-                          transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
-                        }`}>
-                          {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteTransaction(transaction.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -471,51 +687,125 @@ export default function ManagementDashboard() {
           </div>
         )}
 
-        {/* Analytics Tab */}
-        {activeTab === "analytics" && (
-          <div className="grid lg:grid-cols-3 gap-6">
+        {/* Backup Tab */}
+        {activeTab === "backup" && (
+          <div className="space-y-6">
+            {/* Message Display */}
+            {message && (
+              <div className={`p-4 rounded-lg ${message.includes('successfully') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                {message}
+              </div>
+            )}
+
+            {/* Create Backup */}
             <Card className="bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-amber-700" />
-                  Total Income
+                  <Download className="w-5 h-5" />
+                  Create Backup
                 </CardTitle>
+                <CardDescription>Create a backup of all current transactions</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-amber-700">
-                  +${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                <div className="space-y-4">
+                  <p className="text-slate-600">
+                    Create a timestamped backup of all transactions. This will save the current state of your transaction data.
+                  </p>
+                  <Button 
+                    onClick={handleCreateBackup}
+                    disabled={isLoading}
+                    className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
+                  >
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Creating Backup...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Create Backup
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <p className="text-sm text-slate-600 mt-2">From {transactions.filter(t => t.amount > 0).length} transactions</p>
               </CardContent>
             </Card>
 
+            {/* Restore Backup */}
             <Card className="bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingDown className="w-5 h-5 text-red-600" />
-                  Total Expenses
+                  <Upload className="w-5 h-5" />
+                  Restore Backup
                 </CardTitle>
+                <CardDescription>Restore transactions from a previous backup</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-600">
-                  -${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                <div className="space-y-4">
+                  <p className="text-slate-600">
+                    Select a backup file to restore. This will replace all current transactions with the backup data.
+                  </p>
+                  
+                  {backups.length > 0 ? (
+                    <div className="space-y-2">
+                      <Label>Available Backups:</Label>
+                      <div className="space-y-2">
+                        {backups.map((backup, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                            <div>
+                              <p className="font-medium">{backup.filename}</p>
+                              <p className="text-sm text-slate-500">
+                                Created: {new Date(backup.created).toLocaleString()}
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleRestoreBackup(backup.filename)}
+                              disabled={isLoading}
+                              className="text-red-600 border-red-200 hover:bg-red-50"
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              Restore
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 italic">No backup files found.</p>
+                  )}
                 </div>
-                <p className="text-sm text-slate-600 mt-2">From {transactions.filter(t => t.amount < 0).length} transactions</p>
               </CardContent>
             </Card>
 
+            {/* System Information */}
             <Card className="bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-slate-700" />
-                  Net Balance
+                  <Settings className="w-5 h-5" />
+                  System Information
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">
-                  ${(totalIncome - totalExpenses).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Total Transactions</Label>
+                    <p className="text-2xl font-bold text-slate-900">{transactions.length}</p>
+                  </div>
+                  <div>
+                    <Label>Total Income</Label>
+                    <p className="text-2xl font-bold text-green-600">${totalIncome.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <Label>Total Expenses</Label>
+                    <p className="text-2xl font-bold text-red-600">${totalExpenses.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <Label>Net Balance</Label>
+                    <p className="text-2xl font-bold text-slate-900">${(totalIncome - totalExpenses).toLocaleString()}</p>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-600 mt-2">Current account balance</p>
               </CardContent>
             </Card>
           </div>

@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { transactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData } from "@/lib/transactions";
+import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData } from "@/lib/transactions";
 import { generateBankStatementPDF } from "@/lib/pdfStatement";
 import { getUserData, getUserDisplayName, getUserInitials, getUserAccountData, clearUserData } from "@/lib/user";
 import RoryBankLogo from "@/components/RoryBankLogo";
@@ -40,6 +40,26 @@ export default function AccountDetailsPage() {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [availableBalance, setAvailableBalance] = useState(0);
+
+  useEffect(() => {
+    loadTransactions();
+  }, []);
+
+  const loadTransactions = async () => {
+    try {
+      const data = await getTransactions();
+      const balance = await getNetBalance();
+      setTransactions(data);
+      setAvailableBalance(balance);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     clearUserData();
@@ -47,9 +67,13 @@ export default function AccountDetailsPage() {
   };
 
   // Statement generation function
-  const generateStatement = () => {
-    const statementData = getStatementData();
-    generateBankStatementPDF(statementData);
+  const generateStatement = async () => {
+    try {
+      const statementData = await getStatementData();
+      await generateBankStatementPDF(statementData);
+    } catch (error) {
+      console.error('Error generating statement:', error);
+    }
   };
 
   const accountData = getUserAccountData();
@@ -103,10 +127,10 @@ export default function AccountDetailsPage() {
                   <Send className="w-5 h-5" />
                   Transfer
                 </button>
-                <a href="/transactions" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                <button onClick={() => router.push('/transactions')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
                   <Receipt className="w-5 h-5" />
                   Transactions
-                </a>
+                </button>
                 <button onClick={() => router.push('/forex')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
                   <Globe className="w-5 h-5" />
                   Forex Rates
@@ -118,6 +142,10 @@ export default function AccountDetailsPage() {
                 <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
                   <Settings className="w-5 h-5" />
                   Settings
+                </button>
+                <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <BarChart3 className="w-5 h-5" />
+                  Management
                 </button>
               </nav>
 
@@ -141,7 +169,7 @@ export default function AccountDetailsPage() {
         </div>
 
         <nav className="space-y-2">
-          <button onClick={() => router.push('/dashboard')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+          <button onClick={() => router.push('/dashboard')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 font-medium">
             <Home className="w-5 h-5" />
             Dashboard
           </button>
@@ -150,7 +178,7 @@ export default function AccountDetailsPage() {
             <Send className="w-5 h-5" />
             Transfer
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+          <button onClick={() => router.push('/transactions')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
             <Receipt className="w-5 h-5" />
             Transactions
           </button>
@@ -165,6 +193,10 @@ export default function AccountDetailsPage() {
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
             <Settings className="w-5 h-5" />
             Settings
+          </button>
+          <button onClick={() => router.push('/management')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+            <BarChart3 className="w-5 h-5" />
+            Management
           </button>
         </nav>
 
@@ -238,7 +270,7 @@ export default function AccountDetailsPage() {
               </CardHeader>
               <CardContent>
               <div className="text-3xl font-bold">
-                  ${Math.abs(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  ${Math.abs(availableBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
               </CardContent>
             </Card>

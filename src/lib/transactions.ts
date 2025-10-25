@@ -11,80 +11,81 @@ export interface Transaction {
   type: "deposit" | "withdrawal";
 }
 
-export const transactions: Transaction[] = [
-  
-    { 
-        id: 3, 
-        name: "Cheque Deposit", 
-        amount: 3000000.00, 
-        date: "Oct 21, 2025", 
-        time: "9:00 AM", 
-        category: "Deposit",
-        status: "Pending",
-        merchant: "H & G Group of Company #7927", 
-        type: "deposit" 
-    },
-
-    { 
-        id: 1, 
-        name: "Bank Service", 
-        amount: -24.75, 
-        date: "Oct 20, 2025", 
-        time: "10:30 AM", 
-        category: "Service",
-        status: "Processed",
-        merchant: "Service Charge #4523", 
-        type: "withdrawal" 
-    },
-    { 
-        id: 2, 
-        name: "Cash Deposit", 
-        amount: 3500.00, 
-        date: "Oct 18, 2025", 
-        time: "9:00 AM", 
-        category: "Deposit",
-        status: "Processed",
-        merchant: "Lina Wills #4329", 
-        type: "deposit" 
-    },
-];
+// Get transactions from API
+export const getTransactions = async (): Promise<Transaction[]> => {
+  try {
+    const response = await fetch('/api/transactions');
+    const result = await response.json();
+    return result.success ? result.data : [];
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    return [];
+  }
+};
 
 // Helper functions for transaction data
-export const getTransactionsByType = (type: "deposit" | "withdrawal" | "all") => {
+export const getTransactionsByType = async (type: "deposit" | "withdrawal" | "all") => {
+  const transactions = await getTransactions();
   if (type === "all") return transactions;
   return transactions.filter(t => t.type === type);
 };
 
-export const getTotalIncome = () => {
-  return transactions.filter(t => t.type === "deposit" && t.status !== "Pending").reduce((sum, t) => sum + t.amount, 0);
+export const getTotalIncome = async () => {
+  const transactions = await getTransactions();
+  return transactions.filter(t => t.type === "deposit" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0);
 };
 
-export const getTotalExpenses = () => {
-  return Math.abs(transactions.filter(t => t.type === "withdrawal" && t.status !== "Pending").reduce((sum, t) => sum + t.amount, 0));
+export const getTotalExpenses = async () => {
+  const transactions = await getTransactions();
+  return Math.abs(transactions.filter(t => t.type === "withdrawal" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0));
 };
 
-export const getNetBalance = () => {
-  return getTotalIncome() - getTotalExpenses();
+export const getNetBalance = async () => {
+  const income = await getTotalIncome();
+  const expenses = await getTotalExpenses();
+  return income - expenses;
 };
 
-export const getCompletedTransactions = () => {
-  return transactions.filter(t => t.status !== "Pending");
+export const getAvailableBalance = async () => {
+  const transactions = await getTransactions();
+  const processedTransactions = transactions.filter(t => t.status === "Processed");
+  
+  const totalDeposits = processedTransactions
+    .filter(t => t.type === "deposit")
+    .reduce((sum, t) => sum + t.amount, 0);
+    
+  const totalWithdrawals = processedTransactions
+    .filter(t => t.type === "withdrawal")
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    
+  return totalDeposits - totalWithdrawals;
 };
 
-export const getPendingTransactions = () => {
+export const getCompletedTransactions = async () => {
+  const transactions = await getTransactions();
+  return transactions.filter(t => t.status === "Processed");
+};
+
+export const getPendingTransactions = async () => {
+  const transactions = await getTransactions();
   return transactions.filter(t => t.status === "Pending");
 };
 
-export const getStatementData = () => {
+export const getStatementData = async () => {
+  const transactions = await getTransactions();
+  const totalIncome = await getTotalIncome();
+  const totalExpenses = await getTotalExpenses();
+  const netBalance = await getNetBalance();
+  
   return {
     accountHolder: "Lisaglenn",
     accountNumber: "****4582",
     statementPeriod: "October 1 - October 19, 2025",
     statementDate: new Date().toLocaleDateString(),
     openingBalance: 3500.00,
-    totalIncome: getTotalIncome(),
-    totalExpenses: getTotalExpenses(),
-    closingBalance: getNetBalance(),
+    totalIncome,
+    totalExpenses,
+    closingBalance: netBalance,
     transactions: transactions.map(t => ({
       date: t.date,
       time: t.time,
@@ -95,4 +96,107 @@ export const getStatementData = () => {
       status: t.status
     }))
   };
+};
+
+// Admin functions for managing transactions
+export const adminAddTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+  try {
+    const response = await fetch('/api/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(transaction)
+    });
+    const result = await response.json();
+    return result.success ? result.data : null;
+  } catch (error) {
+    console.error('Error adding transaction:', error);
+    return null;
+  }
+};
+
+export const adminUpdateTransaction = async (id: number, updates: Partial<Transaction>) => {
+  try {
+    const response = await fetch('/api/transactions', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates })
+    });
+    const result = await response.json();
+    return result.success ? result.data : null;
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    return null;
+  }
+};
+
+export const adminDeleteTransaction = async (id: number) => {
+  try {
+    const response = await fetch(`/api/transactions?id=${id}`, {
+      method: 'DELETE'
+    });
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    return false;
+  }
+};
+
+export const adminGetTransactionById = async (id: number) => {
+  try {
+    const transactions = await getTransactions();
+    return transactions.find(t => t.id === id) || null;
+  } catch (error) {
+    console.error('Error getting transaction by ID:', error);
+    return null;
+  }
+};
+
+export const adminGetNextTransactionId = async () => {
+  try {
+    const transactions = await getTransactions();
+    return transactions.length > 0 ? Math.max(...transactions.map(t => t.id)) + 1 : 1;
+  } catch (error) {
+    console.error('Error getting next transaction ID:', error);
+    return 1;
+  }
+};
+
+export const adminBackupTransactions = async () => {
+  try {
+    const response = await fetch('/api/backup', {
+      method: 'POST'
+    });
+    const result = await response.json();
+    return result.success ? result.data : null;
+  } catch (error) {
+    console.error('Error creating backup:', error);
+    return null;
+  }
+};
+
+export const adminRestoreTransactions = async (filename: string) => {
+  try {
+    const response = await fetch('/api/backup', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename })
+    });
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error restoring transactions:', error);
+    return false;
+  }
+};
+
+export const adminGetBackups = async () => {
+  try {
+    const response = await fetch('/api/backup');
+    const result = await response.json();
+    return result.success ? result.data : [];
+  } catch (error) {
+    console.error('Error fetching backups:', error);
+    return [];
+  }
 };
