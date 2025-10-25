@@ -99,7 +99,7 @@ export async function sendOTPEmail(email: string, otp: string): Promise<boolean>
       passcode: otp, // The OTP code
       time: expirationTime.toLocaleString(), // Expiration time
       email: email, // Recipient email
-      logo: getEmailLogo('hosted'), // Logo URL for your template
+      logo: 'https://rorybank.com/logo-email.png', // Direct logo URL
       company_name: 'Rory Bank',
       support_email: 'support@rorybank.com',
       website_url: 'https://rorybank.com'

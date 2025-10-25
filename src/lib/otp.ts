@@ -11,8 +11,26 @@ export interface OTPData {
 
 // Generate a random 4-digit OTP
 export function generateOTP(): string {
-  // For testing purposes, always return 5467
-  return "5467";
+  // Generate a truly random 4-digit OTP
+  const min = 1000;
+  const max = 9999;
+  const randomOTP = Math.floor(Math.random() * (max - min + 1)) + min;
+  return randomOTP.toString();
+}
+
+// Generate OTP with additional security (alternative method)
+export function generateSecureOTP(): string {
+  // Use crypto.getRandomValues for better randomness if available
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    const randomValue = array[0];
+    const otp = (randomValue % 9000) + 1000; // Ensure 4-digit range
+    return otp.toString();
+  }
+  
+  // Fallback to Math.random
+  return generateOTP();
 }
 
 // Check if OTP is expired
@@ -28,7 +46,7 @@ export function isValidOTPFormat(otp: string): boolean {
 // Create OTP data
 export function createOTPData(email: string): OTPData {
   return {
-    code: generateOTP(),
+    code: generateSecureOTP(), // Use secure OTP generation
     email,
     expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now (matching EmailJS template)
     attempts: 0
@@ -39,10 +57,10 @@ export function createOTPData(email: string): OTPData {
 export async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
   try {
     console.log('\n' + '='.repeat(50));
-    console.log('📧 SENDING OTP VIA EMAILJS');
+    console.log('📧 SENDING RANDOM OTP VIA EMAILJS');
     console.log('='.repeat(50));
     console.log(`📬 To: ${email}`);
-    console.log(`🔐 OTP Code: ${otp}`);
+    console.log(`🔐 Random OTP Code: ${otp}`);
     console.log(`⏰ Generated at: ${new Date().toLocaleString()}`);
     console.log(`⏳ Expires in: 15 minutes`);
     console.log('='.repeat(50));
