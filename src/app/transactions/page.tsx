@@ -39,7 +39,9 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { transactions, getTotalIncome, getTotalExpenses } from "@/lib/transactions";
+import { transactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData } from "@/lib/transactions";
+import { generateBankStatementPDF } from "@/lib/pdfStatement";
+import { getUserDisplayName, getUserInitials, clearUserData } from "@/lib/user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function TransactionsPage() {
@@ -48,55 +50,28 @@ export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleLogout = () => {
+    clearUserData();
+    router.push('/');
+  };
+
+  const handleViewDetails = (transaction: any) => {
+    setSelectedTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedTransaction(null);
+  };
 
   // Statement generation function
   const generateStatement = () => {
-    const totalIncome = getTotalIncome();
-    const totalExpenses = getTotalExpenses();
-    const netBalance = totalIncome - totalExpenses;
-
-    // Create statement content
-    const statementContent = `
-RORY BANK
-TRANSACTION STATEMENT
-
-Account Holder: Lisaglenn
-Account Number: ****4582
-Statement Period: October 1 - October 19, 2025
-Statement Date: ${new Date().toLocaleDateString()}
-
-SUMMARY:
-Opening Balance: $0.00
-Total Income: $${totalIncome.toFixed(2)}
-Total Expenses: $${totalExpenses.toFixed(2)}
-Closing Balance: $${netBalance.toFixed(2)}
-
-TRANSACTION DETAILS:
-${transactions.map(t => `
-Date: ${t.date} ${t.time}
-Description: ${t.name}
-Merchant: ${t.merchant}
-Category: ${t.category}
-Amount: ${t.amount > 0 ? '+' : ''}$${t.amount.toFixed(2)}
-Status: ${t.status}
-`).join('')}
-
-This statement was generated on ${new Date().toLocaleString()}
-For any questions, please contact customer service.
-
-Rory Bank - Modern Banking
-    `.trim();
-
-    // Create and download file
-    const blob = new Blob([statementContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `RoryBank_TransactionStatement_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    const statementData = getStatementData();
+    generateBankStatementPDF(statementData);
   };
 
   const allTransactions = transactions;
@@ -127,8 +102,8 @@ Rory Bank - Modern Banking
     return matchesFilter && matchesSearch && matchesDate;
   });
 
-  const totalIncome = filteredTransactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = Math.abs(filteredTransactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0));
+  const totalIncome = getTotalIncome();
+  const totalExpenses = getTotalExpenses();
 
   return (
     <AuthWrapper>
@@ -185,10 +160,6 @@ Rory Bank - Modern Banking
                   <BarChart3 className="w-5 h-5" />
                   Analytics
                 </button>
-                <button onClick={() => router.push('/contact')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <MessageCircle className="w-5 h-5" />
-                  Contact
-                </button>
                 <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
                   <Settings className="w-5 h-5" />
                   Settings
@@ -199,7 +170,7 @@ Rory Bank - Modern Banking
                 <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
                   <p className="text-sm font-medium mb-1">Need Help?</p>
                   <p className="text-xs opacity-90 mb-3">Contact our support team</p>
-                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
+                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
                     Get Support
                   </Button>
                 </div>
@@ -242,10 +213,6 @@ Rory Bank - Modern Banking
             <BarChart3 className="w-5 h-5" />
             Analytics
           </button>
-          <button onClick={() => router.push('/contact')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-            <MessageCircle className="w-5 h-5" />
-            Contact
-          </button>
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
             <Settings className="w-5 h-5" />
             Settings
@@ -256,7 +223,7 @@ Rory Bank - Modern Banking
           <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
             <p className="text-sm font-medium mb-1">Need Help?</p>
             <p className="text-xs opacity-90 mb-3">Contact our support team</p>
-            <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
+            <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
               Get Support
             </Button>
           </div>
@@ -277,12 +244,12 @@ Rory Bank - Modern Banking
             </button>
             <div className="relative group">
                 <Avatar className="cursor-pointer">
-                  <AvatarFallback className="bg-amber-600 text-white">LG</AvatarFallback>
+                  <AvatarFallback className="bg-amber-600 text-white">{getUserInitials()}</AvatarFallback>
                 </Avatar>
               <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="p-2">
                   <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
-                    Lisaglenn
+                    {getUserDisplayName()}
                   </div>
                   <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
                     Profile Settings
@@ -290,7 +257,10 @@ Rory Bank - Modern Banking
                   <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
                     Account Settings
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded"
+                  >
                     Logout
                   </button>
                 </div>
@@ -452,20 +422,28 @@ Rory Bank - Modern Banking
                         <p className="text-xs text-slate-400 mt-1">
                           {transaction.date} at {transaction.time}
                         </p>
+                        <p className={`text-xs font-medium ${
+                          transaction.status === 'Pending' ? 'text-yellow-600' : 'text-blue-600'
+                        }`}>Status: {transaction.status}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Badge variant="secondary" className={`${
+                      {/* <Badge variant="secondary" className={`${
                         transaction.type === "deposit" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                       }`}>
                         {transaction.category}
-                      </Badge>
+                      </Badge> */}
                       <p className={`font-semibold text-lg min-w-[120px] text-right ${
+                        transaction.status === 'Pending' ? 'text-yellow-600' : 
                         transaction.type === "deposit" ? "text-green-700" : "text-red-700"
                       }`}>
                         {transaction.type === "deposit" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
                       </p>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewDetails(transaction)}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>
@@ -488,6 +466,113 @@ Rory Bank - Modern Banking
           </CardContent>
         </Card>
       </main>
+
+      {/* Transaction Details Modal */}
+      {isModalOpen && selectedTransaction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-slate-900">Transaction Details</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleCloseModal}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Transaction Details */}
+              <div className="space-y-4">
+                {/* Transaction Type & Amount */}
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      selectedTransaction.type === "deposit" ? "bg-green-100" : "bg-red-100"
+                    }`}>
+                      {selectedTransaction.type === "deposit" ? (
+                        <ArrowDownLeft className="w-5 h-5 text-green-700" />
+                      ) : (
+                        <ArrowUpRight className="w-5 h-5 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">{selectedTransaction.name}</p>
+                      <p className="text-sm text-slate-500">{selectedTransaction.type}</p>
+                    </div>
+                  </div>
+                  <p className={`font-semibold text-lg ${
+                    selectedTransaction.status === 'Pending' ? 'text-yellow-600' : 
+                    selectedTransaction.type === "deposit" ? "text-green-700" : "text-red-700"
+                  }`}>
+                    {selectedTransaction.type === "deposit" ? "+" : "-"}${Math.abs(selectedTransaction.amount).toFixed(2)}
+                  </p>
+                </div>
+
+                {/* Detailed Information */}
+                <div className="space-y-3">
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-600">Merchant</span>
+                    <span className="font-medium text-slate-900">{selectedTransaction.merchant}</span>
+                  </div>
+                  
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-600">Category</span>
+                    <span className="font-medium text-slate-900">{selectedTransaction.category}</span>
+                  </div>
+                  
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-600">Status</span>
+                    <span className={`font-medium ${
+                      selectedTransaction.status === 'Pending' ? 'text-yellow-600' : 'text-blue-600'
+                    }`}>
+                      {selectedTransaction.status}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-600">Date</span>
+                    <span className="font-medium text-slate-900">{selectedTransaction.date}</span>
+                  </div>
+                  
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-600">Time</span>
+                    <span className="font-medium text-slate-900">{selectedTransaction.time}</span>
+                  </div>
+                  
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-600">Transaction ID</span>
+                    <span className="font-medium text-slate-900 font-mono text-sm">{selectedTransaction.id}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    className="flex-1 bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
+                    onClick={handleCloseModal}
+                  >
+                    Close
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => {
+                      // Add print or share functionality here
+                      window.print();
+                    }}
+                  >
+                    Print Details
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </AuthWrapper>
   );

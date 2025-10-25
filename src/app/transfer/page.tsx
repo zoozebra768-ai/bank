@@ -11,7 +11,6 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   CreditCard,
-  Building2,
   Home,
   Send,
   Receipt,
@@ -34,6 +33,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import RoryBankLogo from "@/components/RoryBankLogo";
 
 export default function TransferPage() {
   const router = useRouter();
@@ -65,13 +65,7 @@ export default function TransferPage() {
         {/* Mobile Header */}
         <div className="lg:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">Rory Bank</h1>
-              <p className="text-xs text-slate-500">Online Banking</p>
-            </div>
+            <RoryBankLogo size="sm" />
           </div>
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2">
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -83,13 +77,7 @@ export default function TransferPage() {
           <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
             <div className="bg-white w-64 h-full p-6" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">Rory Bank</h1>
-                  <p className="text-xs text-slate-500">Online Banking</p>
-                </div>
+                <RoryBankLogo size="md" />
               </div>
 
               <nav className="space-y-2">
@@ -128,7 +116,7 @@ export default function TransferPage() {
                 <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
                   <p className="text-sm font-medium mb-1">Need Help?</p>
                   <p className="text-xs opacity-90 mb-3">Contact our support team</p>
-                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
+                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
                     Get Support
                   </Button>
                 </div>
@@ -140,13 +128,7 @@ export default function TransferPage() {
         {/* Desktop Sidebar */}
         <aside className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 p-6">
           <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => router.push('/dashboard')}>
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">Rory Bank</h1>
-              <p className="text-xs text-slate-500">Online Banking</p>
-            </div>
+            <RoryBankLogo size="md" />
           </div>
 
           <nav className="space-y-2">
@@ -185,9 +167,9 @@ export default function TransferPage() {
             <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
               <p className="text-sm font-medium mb-1">Need Help?</p>
               <p className="text-xs opacity-90 mb-3">Contact our support team</p>
-              <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
-                Get Support
-              </Button>
+            <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
+              Get Support
+            </Button>
             </div>
           </div>
         </aside>

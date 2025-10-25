@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Building2,
   Eye,
   EyeOff,
   Lock,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import RoryBankLogo from "@/components/RoryBankLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,15 +27,15 @@ export default function LoginPage() {
   // Dummy users
   const users = [
     {
-      id: "1234567890",
-      email: "highhway1@gmail.com",
+      id: "linaglenn",
+      email: "zoozebra768@gmail.com",
       password: "i4cu56725",
-      name: "Lisaglenn",
+      name: "Linaglenn",
       role: "Customer"
     },
     {
       id: "admin",
-      email: "admin@rorybank.com", 
+      email: "support@rorybank.com", 
       password: "admin123",
       name: "Admin User",
       role: "Administrator"
@@ -55,6 +55,14 @@ export default function LoginPage() {
         // Redirect to OTP verification page with user data
         const userParam = encodeURIComponent(JSON.stringify(user));
         const emailParam = encodeURIComponent(user.email);
+        
+        console.log('🔍 Login Debug Info:');
+        console.log('Found user:', user);
+        console.log('User JSON:', JSON.stringify(user));
+        console.log('Encoded user param:', userParam);
+        console.log('Email param:', emailParam);
+        console.log('Redirect URL:', `/otp?user=${userParam}&email=${emailParam}`);
+        
         router.push(`/otp?user=${userParam}&email=${emailParam}`);
       } else {
         setError("Invalid ID/email or password");
@@ -74,11 +82,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-amber-600 to-orange-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-4">
+            <RoryBankLogo size="xl" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">Rory Bank</h1>
-          <p className="text-slate-600 mt-2">Secure Online Banking</p>
         </div>
 
         {/* Login Form */}

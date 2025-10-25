@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Building2,
   Shield,
   Smartphone,
   TrendingUp,
@@ -20,29 +19,23 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { transactions } from "@/lib/transactions";
+import { isLoggedIn, getUserData, getUserDisplayName, getUserInitials, clearUserData } from "@/lib/user";
+import RoryBankLogo from "@/components/RoryBankLogo";
 
 export default function LandingPage() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; role?: string } | null>(null);
+  const [loginStatus, setLoginStatus] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const userData = localStorage.getItem('user');
-    
-    setIsLoggedIn(loggedIn);
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    setLoginStatus(isLoggedIn());
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('user');
-    setIsLoggedIn(false);
-    setUser(null);
+    clearUserData();
+    setLoginStatus(false);
     router.push('/');
   };
 
@@ -95,13 +88,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">Rory Bank</h1>
-                <p className="text-xs text-slate-500">Modern Banking</p>
-              </div>
+              <RoryBankLogo size="md" />
             </Link>
 
             {/* Desktop Navigation */}
@@ -114,19 +101,19 @@ export default function LandingPage() {
             </div>
 
             <div className="hidden md:flex items-center gap-4">
-              {isLoggedIn ? (
+              {loginStatus ? (
                 <div className="flex items-center gap-4">
-                  <span className="text-slate-600 font-medium">Welcome, {user?.name}</span>
+                  <span className="text-slate-600 font-medium">Welcome, {getUserDisplayName()}</span>
                   <div className="relative group">
                     <Avatar className="cursor-pointer">
                       <AvatarFallback className="bg-amber-600 text-white">
-                        {user?.name?.split(' ').map((n: string) => n[0]).join('')}
+                        {getUserInitials()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                       <div className="p-2">
                         <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
-                          {user?.name}
+                          {getUserDisplayName()}
                         </div>
                         <button 
                           onClick={() => router.push('/dashboard')}
@@ -166,10 +153,10 @@ export default function LandingPage() {
               <a href="#about" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>About</a>
               <a href="/contact" className="block text-slate-600 hover:text-amber-700 font-bold" style={{fontFamily: 'Poppins, sans-serif'}}>Contact</a>
               <div className="flex flex-col gap-2 pt-4">
-                {isLoggedIn ? (
+                {loginStatus ? (
                   <>
                     <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
-                      Welcome, {user?.name}
+                      Welcome, {getUserDisplayName()}
                     </div>
                     <Button onClick={() => router.push('/dashboard')} className="font-bold bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white" style={{fontFamily: 'Poppins, sans-serif'}}>
                       Dashboard
@@ -203,8 +190,8 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-lg h-14"
-                  onClick={() => router.push(isLoggedIn ? '/dashboard' : '/login')}
+                  className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-lg h-14 px-12 w-full sm:w-auto sm:min-w-[200px]"
+                  onClick={() => router.push(loginStatus ? '/dashboard' : '/login')}
                 >
                   Go to Account
                   <ArrowRight className="w-5 h-5 ml-2" />
@@ -311,6 +298,76 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Recent Transactions Section */}
+      {loginStatus && (
+        <section className="py-20 px-6 bg-white">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold text-slate-900 mb-4">Recent Transactions</h2>
+              <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+                Your latest account activity at a glance.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {transactions.slice(0, 6).map((transaction) => (
+                <Card key={transaction.id} className="border-slate-200 hover:border-amber-600 transition-colors hover:shadow-lg">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        transaction.type === 'deposit' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {transaction.type === 'deposit' ? (
+                          <span className="text-green-700 text-sm">↓</span>
+                        ) : (
+                          <span className="text-red-700 text-sm">↑</span>
+                        )}
+                      </div>
+                      <span className={`text-sm font-medium px-2 py-1 rounded ${
+                        transaction.type === 'deposit' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {transaction.type === 'deposit' ? 'Deposit' : 'Withdrawal'}
+                      </span>
+                    </div>
+                    
+                    <h3 className="font-semibold text-slate-900 mb-2">{transaction.name || 'Transaction'}</h3>
+                    
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-slate-500">{transaction.category}</span>
+                    </div>
+                    
+                    <p className="text-sm text-slate-400 mb-3">{transaction.date} at {transaction.time}</p>
+                    
+                    <p className={`text-xs font-medium mb-2 ${
+                      transaction.status === 'Pending' ? 'text-yellow-600' : 'text-blue-600'
+                    }`}>Status: {transaction.status}</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-500">{transaction.merchant}</span>
+                      <span className={`font-semibold ${
+                        transaction.type === 'deposit' ? 'text-green-700' : 'text-red-600'
+                      }`}>
+                        {transaction.type === 'deposit' ? '+' : '-'}₵{Math.abs(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="text-center mt-8">
+              <Button 
+                onClick={() => router.push('/transactions')}
+                className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
+              >
+                View All Transactions
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* CTA Section */}
       <section className="py-20 px-6 bg-gradient-to-br from-amber-600 to-orange-700">
         <div className="max-w-4xl mx-auto text-center">
@@ -345,13 +402,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold">Rory Bank</h3>
-                  <p className="text-xs text-slate-400">Modern Banking</p>
-                </div>
+                <RoryBankLogo size="md" variant="white" />
               </div>
               <p className="text-sm">Banking made simple, secure, and accessible for everyone.</p>
             </div>

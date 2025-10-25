@@ -1,5 +1,7 @@
 // OTP utility functions
 
+import { sendOTPEmail as sendEmailJSOTP } from './emailService';
+
 export interface OTPData {
   code: string;
   email: string;
@@ -28,30 +30,42 @@ export function createOTPData(email: string): OTPData {
   return {
     code: generateOTP(),
     email,
-    expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now (matching EmailJS template)
     attempts: 0
   };
 }
 
-// Simulate sending OTP via email
+// Send OTP via EmailJS
 export async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
-  // In a real application, this would integrate with an email service like SendGrid, AWS SES, etc.
-  console.log('\n' + '='.repeat(50));
-  console.log('📧 OTP EMAIL SIMULATION');
-  console.log('='.repeat(50));
-  console.log(`📬 To: ${email}`);
-  console.log(`🔐 OTP Code: ${otp}`);
-  console.log(`⏰ Generated at: ${new Date().toLocaleString()}`);
-  console.log(`⏳ Expires in: 5 minutes`);
-  console.log('='.repeat(50));
-  console.log('💡 Copy the OTP code above to test the verification\n');
-  
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // For demo purposes, we'll always return true
-  // In production, handle actual email sending errors
-  return true;
+  try {
+    console.log('\n' + '='.repeat(50));
+    console.log('📧 SENDING OTP VIA EMAILJS');
+    console.log('='.repeat(50));
+    console.log(`📬 To: ${email}`);
+    console.log(`🔐 OTP Code: ${otp}`);
+    console.log(`⏰ Generated at: ${new Date().toLocaleString()}`);
+    console.log(`⏳ Expires in: 15 minutes`);
+    console.log('='.repeat(50));
+    
+    // Send OTP via EmailJS
+    const success = await sendEmailJSOTP(email, otp);
+    
+    if (success) {
+      console.log('✅ OTP email sent successfully via EmailJS');
+      console.log('💡 Check your email inbox for the OTP code\n');
+    } else {
+      console.log('❌ Failed to send OTP email via EmailJS');
+      console.log('💡 Using fallback - OTP code is:', otp, '\n');
+    }
+    
+    return success;
+    
+  } catch (error) {
+    console.warn('OTP email sending error (non-blocking):', error);
+    console.log('💡 Using fallback - OTP code is:', otp, '\n');
+    // Always return true in development to allow the flow to continue
+    return true;
+  }
 }
 
 // Verify OTP

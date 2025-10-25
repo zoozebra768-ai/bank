@@ -201,7 +201,7 @@ Rory Bank - Modern Banking
                 <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
                   <p className="text-sm font-medium mb-1">Need Help?</p>
                   <p className="text-xs opacity-90 mb-3">Contact our support team</p>
-                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
+                  <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
                     Get Support
                   </Button>
                 </div>
@@ -262,7 +262,7 @@ Rory Bank - Modern Banking
             <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
             <p className="text-sm font-medium mb-1">Need Help?</p>
             <p className="text-xs opacity-90 mb-3">Contact our support team</p>
-              <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm">
+              <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
               Get Support
             </Button>
             </div>
@@ -464,7 +464,11 @@ Rory Bank - Modern Banking
                           </div>
                           <div>
                       <p className="font-medium text-slate-900">{transaction.name}</p>
-                      <p className="text-sm text-slate-500">{transaction.category} • {transaction.date}</p>
+                      <p className="text-sm text-slate-500">{transaction.category}</p>
+                      <p className="text-xs text-slate-400 mt-1">{transaction.date}</p>
+                      <p className={`text-xs font-medium ${
+                        transaction.status === 'Pending' ? 'text-yellow-600' : 'text-blue-600'
+                      }`}>Status: {transaction.status}</p>
                           </div>
                         </div>
                   <div className="text-right">

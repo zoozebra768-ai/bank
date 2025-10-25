@@ -1,6 +1,5 @@
 "use client";
 
-import AuthWrapper from "@/components/AuthWrapper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,18 +24,12 @@ import {
   Headphones,
   Shield,
   CheckCircle,
-  Home,
-  Receipt,
-  BarChart3,
-  Settings,
-  Bell,
-  Globe,
-  CreditCard,
   Menu,
   X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { sendContactEmail, validateEmail } from "@/lib/emailService";
 
 export default function ContactPage() {
   const router = useRouter();
@@ -51,49 +44,114 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+    
+    // Clear validation error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+    
+    // Clear submit error when user makes changes
+    if (submitError) {
+      setSubmitError(null);
+    }
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.category) {
+      errors.category = 'Please select a category';
+    }
+    
+    if (!formData.subject.trim()) {
+      errors.subject = 'Subject is required';
+    }
+    
+    if (!formData.message.trim()) {
+      errors.message = 'Message is required';
+    } else if (formData.message.trim().length < 10) {
+      errors.message = 'Message must be at least 10 characters long';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous errors
+    setSubmitError(null);
+    setValidationErrors({});
+    
+    // Validate form
+    if (!validateForm()) {
+      setIsSubmitting(false);
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      const result = await sendContactEmail(formData);
+      
+      if (result.success) {
+        setIsSubmitted(true);
+        // Reset form after 3 seconds
+        setTimeout(() => {
+          setIsSubmitted(false);
+          setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            subject: "",
+            category: "",
+            message: ""
+          });
+        }, 3000);
+      } else {
+        setSubmitError(result.message);
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      setSubmitError('An unexpected error occurred. Please try again or email us directly at support@rorybank.com.');
+    }
     
     setIsSubmitting(false);
-    setIsSubmitted(true);
-    
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        subject: "",
-        category: "",
-        message: ""
-      });
-    }, 3000);
   };
 
   const contactInfo = [
-    {
-      icon: Phone,
-      title: "Phone Support",
-      details: ["+233 30 123 4567", "+233 20 987 6543"],
-      description: "24/7 customer support"
-    },
+    // {
+    //   icon: Phone,
+    //   title: "Phone Support",
+    //   details: ["+233 30 123 4567", "+233 20 987 6543"],
+    //   description: "24/7 customer support"
+    // },
     {
       icon: Mail,
       title: "Email Support",
-      details: ["support@rorybank.com", "help@rorybank.com"],
+      details: ["support@rorybank.com"],
       description: "We'll respond within 24 hours"
     },
     {
@@ -123,8 +181,7 @@ export default function ContactPage() {
   ];
 
   return (
-    <AuthWrapper>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         {/* Mobile Header */}
         <div className="lg:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -156,34 +213,17 @@ export default function ContactPage() {
               </div>
 
               <nav className="space-y-2">
-                <button onClick={() => router.push('/dashboard')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <Home className="w-5 h-5" />
-                  Dashboard
+                <button onClick={() => router.push('/')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Building2 className="w-5 h-5" />
+                  Home
                 </button>
-                
-                <button onClick={() => router.push('/transfer')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <Send className="w-5 h-5" />
-                  Transfer
-                </button>
-                <button onClick={() => router.push('/transactions')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <Receipt className="w-5 h-5" />
-                  Transactions
-                </button>
-                <button onClick={() => router.push('/forex')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <Globe className="w-5 h-5" />
-                  Forex Rates
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <BarChart3 className="w-5 h-5" />
-                  Analytics
+                <button onClick={() => router.push('/login')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
+                  <Shield className="w-5 h-5" />
+                  Online Banking
                 </button>
                 <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 font-medium">
                   <MessageCircle className="w-5 h-5" />
                   Contact
-                </button>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
-                  <Settings className="w-5 h-5" />
-                  Settings
                 </button>
               </nav>
 
@@ -268,7 +308,11 @@ export default function ContactPage() {
                           onChange={(e) => handleInputChange("name", e.target.value)}
                           placeholder="Enter your full name"
                           required
+                          className={validationErrors.name ? "border-red-500" : ""}
                         />
+                        {validationErrors.name && (
+                          <p className="text-sm text-red-600">{validationErrors.name}</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email">Email Address *</Label>
@@ -279,7 +323,11 @@ export default function ContactPage() {
                           onChange={(e) => handleInputChange("email", e.target.value)}
                           placeholder="Enter your email"
                           required
+                          className={validationErrors.email ? "border-red-500" : ""}
                         />
+                        {validationErrors.email && (
+                          <p className="text-sm text-red-600">{validationErrors.email}</p>
+                        )}
                       </div>
                     </div>
 
@@ -297,7 +345,7 @@ export default function ContactPage() {
                       <div className="space-y-2">
                         <Label htmlFor="category">Category *</Label>
                         <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                          <SelectTrigger>
+                          <SelectTrigger className={validationErrors.category ? "border-red-500" : ""}>
                             <SelectValue placeholder="Select a category" />
                           </SelectTrigger>
                           <SelectContent>
@@ -308,6 +356,9 @@ export default function ContactPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {validationErrors.category && (
+                          <p className="text-sm text-red-600">{validationErrors.category}</p>
+                        )}
                       </div>
                     </div>
 
@@ -319,7 +370,11 @@ export default function ContactPage() {
                         onChange={(e) => handleInputChange("subject", e.target.value)}
                         placeholder="Brief description of your inquiry"
                         required
+                        className={validationErrors.subject ? "border-red-500" : ""}
                       />
+                      {validationErrors.subject && (
+                        <p className="text-sm text-red-600">{validationErrors.subject}</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -331,8 +386,25 @@ export default function ContactPage() {
                         placeholder="Please provide details about your inquiry..."
                         rows={6}
                         required
+                        className={validationErrors.message ? "border-red-500" : ""}
                       />
+                      {validationErrors.message && (
+                        <p className="text-sm text-red-600">{validationErrors.message}</p>
+                      )}
                     </div>
+
+                    {/* Submit Error Display */}
+                    {submitError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                            <X className="w-3 h-3 text-red-600" />
+                          </div>
+                          <p className="text-red-800 font-medium">Error</p>
+                        </div>
+                        <p className="text-red-700 text-sm mt-1">{submitError}</p>
+                      </div>
+                    )}
 
                     <Button 
                       type="submit" 
@@ -391,23 +463,17 @@ export default function ContactPage() {
                 <CardTitle className="text-white">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button 
-                  className="w-full bg-white text-amber-800 hover:bg-amber-50"
-                  onClick={() => window.open('tel:+233301234567')}
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Call Now
-                </Button>
-                <Button 
+              <Button 
                   className="w-full bg-white/20 text-white hover:bg-white/30 border-0"
                   onClick={() => window.open('mailto:support@rorybank.com')}
                 >
                   <Mail className="w-4 h-4 mr-2" />
                   Email Us
                 </Button>
+               
                 <Button 
                   className="w-full bg-white/20 text-white hover:bg-white/30 border-0"
-                  onClick={() => router.push('/dashboard')}
+                  onClick={() => router.push('/login')}
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   Online Banking
@@ -439,6 +505,5 @@ export default function ContactPage() {
         </div>
       </main>
     </div>
-    </AuthWrapper>
   );
 }

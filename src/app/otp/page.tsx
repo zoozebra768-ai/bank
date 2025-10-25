@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Building2,
   ArrowRight,
   Shield,
   CreditCard,
@@ -13,10 +12,11 @@ import {
   Mail
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { verifyOTP, isValidOTPFormat, createOTPData, sendOTPEmail, type OTPData } from "@/lib/otp";
+import RoryBankLogo from "@/components/RoryBankLogo";
 
-function OTPVerificationContent() {
+export default function OTPVerificationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [otp, setOtp] = useState("");
@@ -24,8 +24,8 @@ function OTPVerificationContent() {
   const [isResendingOTP, setIsResendingOTP] = useState(false);
   const [error, setError] = useState("");
   const [otpData, setOtpData] = useState<OTPData | null>(null);
-  const [userData, setUserData] = useState<{ name: string; email: string; phone: string; role: string } | null>(null);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [userData, setUserData] = useState<any>(null);
+  const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
 
   useEffect(() => {
     // Get user data and OTP data from URL params or localStorage
@@ -111,7 +111,7 @@ function OTPVerificationContent() {
       
       if (emailSent) {
         setOtpData(newOtpData);
-        setTimeLeft(300); // Reset timer
+        setTimeLeft(900); // Reset timer (15 minutes)
         setError("");
       } else {
         setError("Failed to send OTP. Please try again.");
@@ -151,10 +151,9 @@ function OTPVerificationContent() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-amber-600 to-orange-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-4">
+            <RoryBankLogo size="xl" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">Rory Bank</h1>
           <p className="text-slate-600 mt-2">Verify Your Identity</p>
         </div>
 
@@ -260,7 +259,7 @@ function OTPVerificationContent() {
                 <div>
                   <p className="text-sm font-medium text-amber-800">Secure Verification</p>
                   <p className="text-xs text-amber-700 mt-1">
-                    This code expires in 5 minutes and can only be used once. Never share this code with anyone.
+                    This code expires in 15 minutes and can only be used once. Never share this code with anyone.
                   </p>
                 </div>
               </div>
@@ -276,20 +275,5 @@ function OTPVerificationContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function OTPVerificationPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
-        </div>
-      </div>
-    }>
-      <OTPVerificationContent />
-    </Suspense>
   );
 }
