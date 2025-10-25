@@ -26,12 +26,12 @@ export const generateBankStatementPDF = (data: StatementData): void => {
   const pageHeight = doc.internal.pageSize.getHeight();
   
   // Colors
-  const primaryColor = [255, 140, 0]; // Amber
-  const secondaryColor = [51, 65, 85]; // Slate
-  const lightGray = [248, 250, 252]; // Slate 50
+  const primaryColor = [255, 140, 0] as const; // Amber
+  const secondaryColor = [51, 65, 85] as const; // Slate
+  const lightGray = [248, 250, 252] as const; // Slate 50
   
   // Header Section
-  doc.setFillColor(...primaryColor);
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 0, pageWidth, 25, 'F');
   
   // Bank Logo/Name
@@ -46,16 +46,16 @@ export const generateBankStatementPDF = (data: StatementData): void => {
   doc.text('Modern Banking Solutions', 20, 22);
   
   // Statement Title
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.text('ACCOUNT STATEMENT', pageWidth - 20, 18, { align: 'right' });
   
   // Account Information Section
-  doc.setFillColor(...lightGray);
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
   doc.rect(20, 35, pageWidth - 40, 40, 'F');
   
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Account Holder:', 25, 45);
@@ -76,7 +76,7 @@ export const generateBankStatementPDF = (data: StatementData): void => {
   doc.setDrawColor(200, 200, 200);
   doc.rect(20, summaryY, pageWidth - 40, 30, 'S');
   
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('ACCOUNT SUMMARY', 25, summaryY + 10);
@@ -107,10 +107,10 @@ export const generateBankStatementPDF = (data: StatementData): void => {
   
   // Transactions Section
   const transactionsY = summaryY + 40;
-  doc.setFillColor(...lightGray);
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
   doc.rect(20, transactionsY, pageWidth - 40, 15, 'F');
   
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('TRANSACTION DETAILS', 25, transactionsY + 10);
@@ -134,7 +134,7 @@ export const generateBankStatementPDF = (data: StatementData): void => {
       currentY = 20;
     }
     
-    doc.setTextColor(...secondaryColor);
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     
@@ -168,14 +168,14 @@ export const generateBankStatementPDF = (data: StatementData): void => {
       doc.setTextColor(255, 140, 0); // Amber color for pending
       doc.setFont('helvetica', 'bold');
     } else {
-      doc.setTextColor(...secondaryColor);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
       doc.setFont('helvetica', 'normal');
     }
     doc.text(transaction.status, 140, currentY);
     
     // Amount (single line, top aligned)
-    const amountColor = transaction.amount > 0 ? [34, 197, 94] : [239, 68, 68]; // Green or Red
-    doc.setTextColor(...amountColor);
+    const amountColor = transaction.amount > 0 ? [34, 197, 94] as const : [239, 68, 68] as const; // Green or Red
+    doc.setTextColor(amountColor[0], amountColor[1], amountColor[2]);
     doc.text(`$${Math.abs(transaction.amount).toFixed(2)}`, pageWidth - 25, currentY, { align: 'right' });
     
     currentY += rowHeight + 1;
@@ -183,7 +183,7 @@ export const generateBankStatementPDF = (data: StatementData): void => {
   
   // Footer
   const footerY = pageHeight - 30;
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.text('This statement was generated electronically and does not require a signature.', 20, footerY);
