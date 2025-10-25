@@ -42,6 +42,16 @@ export default function ManagementDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+  
+  const [accountData, setAccountData] = useState({
+    name: "Lisaglenn",
+    number: "****4582",
+    balance: 3500.00,
+    interestRate: "2.5%",
+    routing: "021000021",
+    openedDate: "2023-01-15",
+    type: "Checking"
+  });
 
   // Transaction data state
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -104,6 +114,30 @@ export default function ManagementDashboard() {
       setBackups(backups);
     } catch (error) {
       console.error('Error loading backups:', error);
+    }
+  };
+
+  const handleAccountUpdate = (field: string, value: string) => {
+    setAccountData(prev => ({
+      ...prev,
+      [field]: field === 'balance' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  const handleSaveAccount = async () => {
+    setIsLoading(true);
+    setMessage("");
+    
+    try {
+      // Here you would normally save to your backend
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      
+      setMessage("Account updated successfully!");
+      setIsEditing(false);
+    } catch (error) {
+      setMessage("Failed to update account. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
