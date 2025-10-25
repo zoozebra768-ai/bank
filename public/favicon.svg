@@ -1,0 +1,30 @@
+<!-- Rory Bank Favicon SVG -->
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="faviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D97706" />
+      <stop offset="100%" stop-color="#EA580C" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" fill="#FEF3C7" rx="6"/>
+  
+  <!-- Bank Building -->
+  <rect x="6" y="20" width="20" height="8" rx="1" fill="url(#faviconGradient)"/>
+  <rect x="7" y="16" width="18" height="4" rx="0.5" fill="url(#faviconGradient)"/>
+  <path d="M4 16 L16 6 L28 16 Z" fill="url(#faviconGradient)"/>
+  
+  <!-- Windows -->
+  <rect x="9" y="22" width="2" height="1.5" rx="0.2" fill="white" opacity="0.3"/>
+  <rect x="12" y="22" width="2" height="1.5" rx="0.2" fill="white" opacity="0.3"/>
+  <rect x="15" y="22" width="2" height="1.5" rx="0.2" fill="white" opacity="0.3"/>
+  <rect x="18" y="22" width="2" height="1.5" rx="0.2" fill="white" opacity="0.3"/>
+  
+  <!-- Door -->
+  <rect x="14" y="24" width="4" height="4" rx="0.3" fill="white" opacity="0.4"/>
+  
+  <!-- Security Shield -->
+  <path d="M16 8 L17.5 9.5 L16 11 L14.5 9.5 Z" fill="white" opacity="0.6"/>
+  <path d="M15.2 9.5 L16 10.3 L16.8 8.7" stroke="white" stroke-width="0.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
