@@ -45,6 +45,7 @@ export default function ManagementDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [isClient, setIsClient] = useState(false);
   
   const [accountData, setAccountData] = useState({
     name: "Lisaglenn",
@@ -93,22 +94,23 @@ export default function ManagementDashboard() {
     "Service"
   ];
 
-  // Load transactions on component mount
+  // Set client flag
   useEffect(() => {
+    setIsClient(true);
     loadTransactions();
     loadBackups();
   }, []);
 
   // Auth check after hooks
   const userRole = getUserRole();
-  const isLoggedIn = localStorage.getItem('isLoggedIn');
+  const isLoggedIn = isClient ? localStorage.getItem('isLoggedIn') : null;
   
   // Redirect if not admin
   useEffect(() => {
-    if (!isLoggedIn || userRole !== 'Administrator') {
+    if (isClient && (!isLoggedIn || userRole !== 'Administrator')) {
       router.push('/dashboard');
     }
-  }, [isLoggedIn, userRole, router]);
+  }, [isClient, isLoggedIn, userRole, router]);
 
   const loadTransactions = async () => {
     try {
@@ -294,7 +296,18 @@ export default function ManagementDashboard() {
   const totalIncome = transactions.filter(t => t.type === "deposit" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = Math.abs(transactions.filter(t => t.type === "withdrawal" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0));
 
-  // Show access denied if not admin
+  // Show loading or access denied
+  if (!isClient) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
   if (!isLoggedIn || userRole !== 'Administrator') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
