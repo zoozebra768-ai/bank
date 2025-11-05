@@ -90,6 +90,66 @@ export default function AccountDetailsPage() {
     return true;
   });
 
+  // Sort transactions by date and time (newest first)
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    // Helper function to parse date strings (handles both "Oct 20, 2025" and "2025-10-20" formats)
+    const parseDate = (dateStr: string): Date => {
+      // Try ISO format first (2025-10-20)
+      if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+        return new Date(dateStr);
+      }
+      // Try formatted date (Oct 20, 2025)
+      const parsed = new Date(dateStr);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+      return new Date(0); // Fallback for invalid dates
+    };
+
+    // Helper function to parse time strings (handles both "10:30 AM" and "12:41" formats)
+    const parseTime = (timeStr: string): number => {
+      const normalized = timeStr.trim().toUpperCase();
+      const hasAMPM = normalized.includes('AM') || normalized.includes('PM');
+      
+      if (hasAMPM) {
+        // Format: "10:30 AM" or "12:41 PM"
+        const match = normalized.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+        if (match) {
+          let hours = parseInt(match[1]);
+          const minutes = parseInt(match[2]);
+          const ampm = match[3];
+          
+          if (ampm === 'PM' && hours !== 12) hours += 12;
+          if (ampm === 'AM' && hours === 12) hours = 0;
+          
+          return hours * 60 + minutes; // Convert to minutes for comparison
+        }
+      } else {
+        // Format: "12:41" (24-hour format)
+        const match = normalized.match(/(\d{1,2}):(\d{2})/);
+        if (match) {
+          const hours = parseInt(match[1]);
+          const minutes = parseInt(match[2]);
+          return hours * 60 + minutes;
+        }
+      }
+      return 0; // Fallback
+    };
+
+    const dateA = parseDate(a.date);
+    const dateB = parseDate(b.date);
+    
+    // Compare dates first (newest first)
+    if (dateB.getTime() !== dateA.getTime()) {
+      return dateB.getTime() - dateA.getTime();
+    }
+    
+    // If dates are the same, compare by time (newest first)
+    const timeA = parseTime(a.time);
+    const timeB = parseTime(b.time);
+    return timeB - timeA;
+  });
+
   const totalIncome = getTotalIncome();
   const totalExpenses = getTotalExpenses();
 
@@ -334,7 +394,7 @@ export default function AccountDetailsPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {filteredTransactions.map((transaction) => (
+                  {sortedTransactions.map((transaction) => (
                     <div
                       key={transaction.id}
                       className="p-4 rounded-lg hover:bg-slate-50 transition-colors border border-slate-100 cursor-pointer"

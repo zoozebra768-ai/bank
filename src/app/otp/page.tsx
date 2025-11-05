@@ -12,7 +12,7 @@ import {
   Mail
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { verifyOTP, isValidOTPFormat, createOTPData, sendOTPEmail, type OTPData } from "@/lib/otp";
 import RoryBankLogo from "@/components/RoryBankLogo";
 
@@ -32,9 +32,13 @@ function OTPVerificationContent() {
   const [otpData, setOtpData] = useState<OTPData | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
+  const otpSentRef = useRef(false); // Track if OTP has been sent (using ref to avoid re-renders)
 
   useEffect(() => {
-    // Get user data and OTP data from URL params or localStorage
+    // Prevent sending OTP multiple times (React Strict Mode causes double renders in dev)
+    if (otpSentRef.current || userData) return;
+    
+    // Get user data and OTP data from URL params
     const email = searchParams.get('email');
     const userJson = searchParams.get('user');
     
@@ -47,7 +51,8 @@ function OTPVerificationContent() {
         const newOtpData = createOTPData(email || user.email);
         setOtpData(newOtpData);
         
-        // Send OTP
+        // Mark OTP as sent and send it
+        otpSentRef.current = true;
         sendOTPEmail(email || user.email, newOtpData.code);
       } catch (error) {
         setError("Invalid session data. Please login again.");
@@ -55,6 +60,7 @@ function OTPVerificationContent() {
     } else {
       setError("No session data found. Please login again.");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   useEffect(() => {
@@ -119,6 +125,7 @@ function OTPVerificationContent() {
         setOtpData(newOtpData);
         setTimeLeft(900); // Reset timer (15 minutes)
         setError("");
+        otpSentRef.current = true; // Mark as sent
       } else {
         setError("Failed to send OTP. Please try again.");
       }
