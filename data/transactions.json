@@ -25,10 +25,10 @@
     "id": 3,
     "name": "Cheque deposit ",
     "amount": 3000000,
-    "date": "2025-10-20",
+    "date": "2025-11-05",
     "time": "12:41",
-    "category": "Income",
-    "status": "Pending",
+    "category": "Deposit",
+    "status": "Processed",
     "merchant": "H & G Group Of Company",
     "type": "deposit"
   }
