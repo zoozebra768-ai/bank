@@ -41,7 +41,7 @@ export default function ManagementDashboard() {
   const router = useRouter();
   
   // All hooks must be called before any conditional returns
-  const [activeTab, setActiveTab] = useState("accounts");
+  const [activeTab, setActiveTab] = useState("users");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isClient, setIsClient] = useState(false);
@@ -69,6 +69,27 @@ export default function ManagementDashboard() {
     routing: "",
     openedDate: new Date().toISOString().split('T')[0],
     type: "Checking"
+  });
+
+  // User data state
+  interface User {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    phone?: string;
+  }
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editUserForm, setEditUserForm] = useState<Partial<User>>({});
+  const [newUser, setNewUser] = useState({
+    id: "",
+    email: "",
+    password: "",
+    name: "",
+    role: "Customer",
+    phone: ""
   });
 
   // Transaction data state
@@ -120,6 +141,7 @@ export default function ManagementDashboard() {
     loadTransactions();
     loadBackups();
     loadAccounts();
+    loadUsers();
   }, []);
 
   // Auth check after hooks
@@ -247,6 +269,119 @@ export default function ManagementDashboard() {
   const handleCancelEditAccount = () => {
     setEditingAccount(null);
     setEditAccountForm({});
+  };
+
+  const loadUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users');
+      const data = await response.json();
+      if (data.success) {
+        setUsers(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
+
+  const handleAddUser = async () => {
+    if (!newUser.id || !newUser.email || !newUser.password || !newUser.name || !newUser.role) {
+      setMessage("ID, email, password, name, and role are required");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUsers(prev => [data.data, ...prev]);
+        setNewUser({
+          id: "",
+          email: "",
+          password: "",
+          name: "",
+          role: "Customer",
+          phone: ""
+        });
+        setMessage("User created successfully");
+      } else {
+        setMessage(data.error || "Failed to create user");
+      }
+    } catch (error) {
+      setMessage("Error creating user");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartEditUser = (user: User) => {
+    setEditingUser(user.id);
+    setEditUserForm({
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      phone: user.phone || ""
+    });
+  };
+
+  const handleSaveEditUser = async () => {
+    if (!editingUser) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingUser, ...editUserForm })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setMessage("User updated successfully");
+        await loadUsers();
+        setEditingUser(null);
+        setEditUserForm({});
+      } else {
+        setMessage(data.error || "Failed to update user");
+      }
+    } catch (error) {
+      setMessage("Error updating user");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelEditUser = () => {
+    setEditingUser(null);
+    setEditUserForm({});
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/users?id=${id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUsers(prev => prev.filter(u => u.id !== id));
+        setMessage("User deleted successfully");
+      } else {
+        setMessage(data.error || "Failed to delete user");
+      }
+    } catch (error) {
+      setMessage("Error deleting user");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteAccount = async (id: number) => {
@@ -520,11 +655,19 @@ export default function ManagementDashboard() {
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-8">
           <Button
+            variant={activeTab === "users" ? "default" : "outline"}
+            onClick={() => setActiveTab("users")}
+            className={activeTab === "users" ? "bg-amber-700 hover:bg-amber-800" : ""}
+          >
+            <User className="w-4 h-4 mr-2" />
+            Users
+          </Button>
+          <Button
             variant={activeTab === "accounts" ? "default" : "outline"}
             onClick={() => setActiveTab("accounts")}
             className={activeTab === "accounts" ? "bg-amber-700 hover:bg-amber-800" : ""}
           >
-            <User className="w-4 h-4 mr-2" />
+            <CreditCard className="w-4 h-4 mr-2" />
             Accounts
           </Button>
           <Button
@@ -549,6 +692,218 @@ export default function ManagementDashboard() {
         {message && (
           <div className={`mb-4 p-4 rounded-lg ${message.includes('successfully') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
             {message}
+          </div>
+        )}
+
+        {/* Users Tab */}
+        {activeTab === "users" && (
+          <div className="space-y-6">
+            {/* Create New User */}
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Create New User
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserId">User ID</Label>
+                    <Input
+                      id="newUserId"
+                      value={newUser.id}
+                      onChange={(e) => setNewUser(prev => ({...prev, id: e.target.value}))}
+                      placeholder="e.g., johnsmith"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserEmail">Email</Label>
+                    <Input
+                      id="newUserEmail"
+                      type="email"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser(prev => ({...prev, email: e.target.value}))}
+                      placeholder="e.g., john@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserPassword">Password</Label>
+                    <Input
+                      id="newUserPassword"
+                      type="password"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser(prev => ({...prev, password: e.target.value}))}
+                      placeholder="Enter password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserName">Full Name</Label>
+                    <Input
+                      id="newUserName"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser(prev => ({...prev, name: e.target.value}))}
+                      placeholder="e.g., John Smith"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserRole">Role</Label>
+                    <Select value={newUser.role} onValueChange={(value) => setNewUser(prev => ({...prev, role: value}))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Customer">Customer</SelectItem>
+                        <SelectItem value="Administrator">Administrator</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserPhone">Phone (Optional)</Label>
+                    <Input
+                      id="newUserPhone"
+                      type="tel"
+                      value={newUser.phone}
+                      onChange={(e) => setNewUser(prev => ({...prev, phone: e.target.value}))}
+                      placeholder="e.g., +1 (555) 123-4567"
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleAddUser}
+                  disabled={isLoading}
+                  className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create User
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Users List */}
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle>All Users</CardTitle>
+                <CardDescription>Manage existing users</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {users.length === 0 ? (
+                    <p className="text-center text-slate-500 py-8">No users found. Create your first user above.</p>
+                  ) : (
+                    users.map((user) => (
+                      <div key={user.id} className="p-4 border border-slate-200 rounded-lg">
+                        {editingUser === user.id ? (
+                          // Edit Form
+                          <div className="space-y-4">
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-user-email-${user.id}`}>Email</Label>
+                                <Input
+                                  id={`edit-user-email-${user.id}`}
+                                  type="email"
+                                  value={editUserForm.email || ''}
+                                  onChange={(e) => setEditUserForm(prev => ({...prev, email: e.target.value}))}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-user-name-${user.id}`}>Full Name</Label>
+                                <Input
+                                  id={`edit-user-name-${user.id}`}
+                                  value={editUserForm.name || ''}
+                                  onChange={(e) => setEditUserForm(prev => ({...prev, name: e.target.value}))}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-user-role-${user.id}`}>Role</Label>
+                                <Select 
+                                  value={editUserForm.role || ''} 
+                                  onValueChange={(value) => setEditUserForm(prev => ({...prev, role: value}))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Customer">Customer</SelectItem>
+                                    <SelectItem value="Administrator">Administrator</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-user-phone-${user.id}`}>Phone (Optional)</Label>
+                                <Input
+                                  id={`edit-user-phone-${user.id}`}
+                                  type="tel"
+                                  value={editUserForm.phone || ''}
+                                  onChange={(e) => setEditUserForm(prev => ({...prev, phone: e.target.value}))}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                onClick={handleSaveEditUser}
+                                disabled={isLoading}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Save className="w-4 h-4 mr-2" />
+                                Save Changes
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={handleCancelEditUser}
+                                disabled={isLoading}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          // Display Mode
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                                <User className="w-6 h-6 text-amber-700" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">{user.name}</p>
+                                <p className="text-sm text-slate-500">ID: {user.id}</p>
+                                <p className="text-xs text-slate-400">{user.email}</p>
+                                {user.phone && (
+                                  <p className="text-xs text-slate-400">Phone: {user.phone}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <Badge variant={user.role === 'Administrator' ? 'default' : 'secondary'}>
+                                {user.role}
+                              </Badge>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleStartEditUser(user)}
+                                  className="text-blue-600 hover:text-blue-700"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 

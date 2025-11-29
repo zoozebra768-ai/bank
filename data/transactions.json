@@ -31,5 +31,16 @@
     "status": "Processed",
     "merchant": "H & G Group Of Company",
     "type": "deposit"
+  },
+  {
+    "id": 4,
+    "name": "Bank Tranfer",
+    "amount": 3000000,
+    "date": "2025-11-28",
+    "time": "11:20",
+    "category": "Transfer",
+    "status": "Pending",
+    "merchant": "Ecobank #2456",
+    "type": "deposit"
   }
 ]
