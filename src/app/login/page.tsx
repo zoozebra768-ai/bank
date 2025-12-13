@@ -50,7 +50,7 @@ export default function LoginPage() {
     {
       id: "kate",
       email: "cake4ukate@gmail.com",
-      password: "katecake123",
+      password: "@JamesBond007",
       name: "Kate",
       role: "Customer"
     }
