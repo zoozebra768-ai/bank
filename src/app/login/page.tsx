@@ -44,7 +44,7 @@ export default function LoginPage() {
       id: "jgary",
       email: "jessicagary8@gmail.com",
       password: "News2me2$77$",
-      name: "Jessica",
+      name: "Gary",
       role: "Customer"
     },
     {
