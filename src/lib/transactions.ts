@@ -26,13 +26,20 @@ const getCurrentUserId = (): string | undefined => {
   return undefined;
 };
 
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') return ''; // Browser should use relative url
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000'; // Default to localhost
+};
+
 // Get transactions from API for current user
 export const getTransactions = async (userId?: string): Promise<Transaction[]> => {
   try {
     const effectiveUserId = userId || getCurrentUserId();
+    const baseUrl = getBaseUrl();
     const url = effectiveUserId
-      ? `/api/transactions?userId=${effectiveUserId}`
-      : '/api/transactions';
+      ? `${baseUrl}/api/transactions?userId=${effectiveUserId}`
+      : `${baseUrl}/api/transactions`;
 
     const response = await fetch(url);
     const result = await response.json();
