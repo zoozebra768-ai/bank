@@ -51,7 +51,7 @@ export default function LoginPage() {
       id: "cake4ukate925",
       email: "cake4ukate@gmail.com",
       password: "@JamesBond007",
-      name: "Kate",
+      name: "Kate Osei",
       role: "Customer"
     }
   ];
