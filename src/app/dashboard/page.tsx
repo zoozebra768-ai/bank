@@ -309,7 +309,7 @@ export default function AccountDetailsPage() {
               <h2 className="text-3xl font-bold text-slate-900">Welcome back, {getUserDisplayName()}</h2>
               <p className="text-slate-600 mt-1">Here's what's happening with your money today</p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-4">
               {/* <button className="p-2 rounded-lg hover:bg-white relative">
               <Bell className="w-5 h-5 text-slate-600" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
