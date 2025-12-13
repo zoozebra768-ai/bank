@@ -67,7 +67,7 @@ export default function LoginPage() {
 
       if (user) {
         // Check if user should skip OTP (jgary and admin users)
-        if (user.id === 'jgary' || user.id === 'kate' || user.role === 'Administrator') {
+        if (user.id === 'jgary' || user.id === 'cake4ukate925' || user.role === 'Administrator') {
           // Skip OTP and go directly to dashboard
           localStorage.setItem('user', JSON.stringify(user));
           localStorage.setItem('isLoggedIn', 'true');
