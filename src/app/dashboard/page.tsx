@@ -170,11 +170,30 @@ export default function AccountDetailsPage() {
         {/* Mobile Header */}
         <div className="lg:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 -ml-2">
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
             <RoryBankLogo size="sm" />
           </div>
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2">
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="relative group">
+            <Avatar className="cursor-pointer w-8 h-8">
+              <AvatarFallback className="bg-amber-600 text-white text-xs">{getUserInitials()}</AvatarFallback>
+            </Avatar>
+            {/* Mobile User Dropdown */}
+            <div className="absolute right-0 top-10 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="p-2">
+                <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
+                  {getUserDisplayName()}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Mobile Menu Overlay */}
@@ -291,9 +310,6 @@ export default function AccountDetailsPage() {
               <p className="text-slate-600 mt-1">Here's what's happening with your money today</p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="p-2 rounded-lg hover:bg-white">
-                <Search className="w-5 h-5 text-slate-600" />
-              </button>
               {/* <button className="p-2 rounded-lg hover:bg-white relative">
               <Bell className="w-5 h-5 text-slate-600" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
