@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "name": "Cash Deposit",
+    "amount": 500,
+    "date": "2025-12-24",
+    "time": "11:22",
+    "category": "Cash",
+    "status": "Processed",
+    "merchant": "Kate #5488",
+    "type": "deposit"
+  }
+]

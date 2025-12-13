@@ -39,13 +39,13 @@ import { getUserRole, clearUserData } from "@/lib/user";
 
 export default function ManagementDashboard() {
   const router = useRouter();
-  
+
   // All hooks must be called before any conditional returns
   const [activeTab, setActiveTab] = useState("users");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isClient, setIsClient] = useState(false);
-  
+
   // Account data state
   interface Account {
     id: number;
@@ -92,9 +92,9 @@ export default function ManagementDashboard() {
     phone: ""
   });
 
-  // Transaction data state
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [backups, setBackups] = useState<{ filename: string; created: string }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("linaglenn"); // Default to linaglenn
   const [editingTransaction, setEditingTransaction] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -120,7 +120,7 @@ export default function ManagementDashboard() {
 
   const categories = [
     "Food & Drink",
-    "Groceries", 
+    "Groceries",
     "Entertainment",
     "Income",
     "Shopping",
@@ -147,7 +147,7 @@ export default function ManagementDashboard() {
   // Auth check after hooks
   const userRole = getUserRole();
   const isLoggedIn = isClient ? localStorage.getItem('isLoggedIn') : null;
-  
+
   // Redirect if not admin
   useEffect(() => {
     if (isClient && (!isLoggedIn || userRole !== 'Administrator')) {
@@ -155,10 +155,10 @@ export default function ManagementDashboard() {
     }
   }, [isClient, isLoggedIn, userRole, router]);
 
-  const loadTransactions = async () => {
+  const loadTransactions = async (userId?: string) => {
     try {
-      // Use the same endpoint as transactions page and dashboard
-      const response = await fetch('/api/transactions');
+      const effectiveUserId = userId || selectedUserId;
+      const response = await fetch(`/api/transactions?userId=${effectiveUserId}`);
       const data = await response.json();
       if (data.success) {
         setTransactions(data.data);
@@ -419,7 +419,7 @@ export default function ManagementDashboard() {
       const response = await fetch('/api/admin/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTransaction)
+        body: JSON.stringify({ ...newTransaction, userId: selectedUserId })
       });
 
       const data = await response.json();
@@ -451,7 +451,7 @@ export default function ManagementDashboard() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/admin/transactions?id=${id}`, {
+      const response = await fetch(`/api/admin/transactions?id=${id}&userId=${selectedUserId}`, {
         method: 'DELETE'
       });
 
@@ -504,20 +504,24 @@ export default function ManagementDashboard() {
         type: editForm.type
       };
 
-      const result = await adminUpdateTransaction(editingTransaction, updates);
-      if (result) {
+      const result = await fetch('/api/admin/transactions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingTransaction, userId: selectedUserId, ...updates })
+      }).then(res => res.json());
+      if (result.success) {
         setMessage("Transaction updated successfully");
         await loadTransactions();
         setEditingTransaction(null);
-        setEditForm({ 
-          name: '', 
-          amount: '', 
-          date: '', 
-          time: '', 
-          category: '', 
-          merchant: '', 
-          status: '', 
-          type: 'withdrawal' 
+        setEditForm({
+          name: '',
+          amount: '',
+          date: '',
+          time: '',
+          category: '',
+          merchant: '',
+          status: '',
+          type: 'withdrawal'
         });
       } else {
         setMessage("Failed to update transaction");
@@ -531,15 +535,15 @@ export default function ManagementDashboard() {
 
   const handleCancelEdit = () => {
     setEditingTransaction(null);
-    setEditForm({ 
-      name: '', 
-      amount: '', 
-      date: '', 
-      time: '', 
-      category: '', 
-      merchant: '', 
-      status: '', 
-      type: 'withdrawal' 
+    setEditForm({
+      name: '',
+      amount: '',
+      date: '',
+      time: '',
+      category: '',
+      merchant: '',
+      status: '',
+      type: 'withdrawal'
     });
   };
 
@@ -593,7 +597,7 @@ export default function ManagementDashboard() {
       </div>
     );
   }
-  
+
   if (!isLoggedIn || userRole !== 'Administrator') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
@@ -623,16 +627,16 @@ export default function ManagementDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => router.push('/dashboard')}
                 className="flex items-center gap-2"
               >
                 <Eye className="w-4 h-4" />
                 View Dashboard
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => router.back()}
                 className="flex items-center gap-2"
               >
@@ -653,11 +657,11 @@ export default function ManagementDashboard() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-8">
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0">
           <Button
             variant={activeTab === "users" ? "default" : "outline"}
             onClick={() => setActiveTab("users")}
-            className={activeTab === "users" ? "bg-amber-700 hover:bg-amber-800" : ""}
+            className={`flex-shrink-0 ${activeTab === "users" ? "bg-amber-700 hover:bg-amber-800" : ""}`}
           >
             <User className="w-4 h-4 mr-2" />
             Users
@@ -665,7 +669,7 @@ export default function ManagementDashboard() {
           <Button
             variant={activeTab === "accounts" ? "default" : "outline"}
             onClick={() => setActiveTab("accounts")}
-            className={activeTab === "accounts" ? "bg-amber-700 hover:bg-amber-800" : ""}
+            className={`flex-shrink-0 ${activeTab === "accounts" ? "bg-amber-700 hover:bg-amber-800" : ""}`}
           >
             <CreditCard className="w-4 h-4 mr-2" />
             Accounts
@@ -673,7 +677,7 @@ export default function ManagementDashboard() {
           <Button
             variant={activeTab === "transactions" ? "default" : "outline"}
             onClick={() => setActiveTab("transactions")}
-            className={activeTab === "transactions" ? "bg-amber-700 hover:bg-amber-800" : ""}
+            className={`flex-shrink-0 ${activeTab === "transactions" ? "bg-amber-700 hover:bg-amber-800" : ""}`}
           >
             <CreditCard className="w-4 h-4 mr-2" />
             Transactions
@@ -681,7 +685,7 @@ export default function ManagementDashboard() {
           <Button
             variant={activeTab === "backup" ? "default" : "outline"}
             onClick={() => setActiveTab("backup")}
-            className={activeTab === "backup" ? "bg-amber-700 hover:bg-amber-800" : ""}
+            className={`flex-shrink-0 ${activeTab === "backup" ? "bg-amber-700 hover:bg-amber-800" : ""}`}
           >
             <Download className="w-4 h-4 mr-2" />
             Backup & Restore
@@ -713,7 +717,7 @@ export default function ManagementDashboard() {
                     <Input
                       id="newUserId"
                       value={newUser.id}
-                      onChange={(e) => setNewUser(prev => ({...prev, id: e.target.value}))}
+                      onChange={(e) => setNewUser(prev => ({ ...prev, id: e.target.value }))}
                       placeholder="e.g., johnsmith"
                     />
                   </div>
@@ -723,7 +727,7 @@ export default function ManagementDashboard() {
                       id="newUserEmail"
                       type="email"
                       value={newUser.email}
-                      onChange={(e) => setNewUser(prev => ({...prev, email: e.target.value}))}
+                      onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
                       placeholder="e.g., john@example.com"
                     />
                   </div>
@@ -733,7 +737,7 @@ export default function ManagementDashboard() {
                       id="newUserPassword"
                       type="password"
                       value={newUser.password}
-                      onChange={(e) => setNewUser(prev => ({...prev, password: e.target.value}))}
+                      onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
                       placeholder="Enter password"
                     />
                   </div>
@@ -742,13 +746,13 @@ export default function ManagementDashboard() {
                     <Input
                       id="newUserName"
                       value={newUser.name}
-                      onChange={(e) => setNewUser(prev => ({...prev, name: e.target.value}))}
+                      onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="e.g., John Smith"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newUserRole">Role</Label>
-                    <Select value={newUser.role} onValueChange={(value) => setNewUser(prev => ({...prev, role: value}))}>
+                    <Select value={newUser.role} onValueChange={(value) => setNewUser(prev => ({ ...prev, role: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
@@ -764,12 +768,12 @@ export default function ManagementDashboard() {
                       id="newUserPhone"
                       type="tel"
                       value={newUser.phone}
-                      onChange={(e) => setNewUser(prev => ({...prev, phone: e.target.value}))}
+                      onChange={(e) => setNewUser(prev => ({ ...prev, phone: e.target.value }))}
                       placeholder="e.g., +1 (555) 123-4567"
                     />
                   </div>
                 </div>
-                <Button 
+                <Button
                   onClick={handleAddUser}
                   disabled={isLoading}
                   className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
@@ -803,7 +807,7 @@ export default function ManagementDashboard() {
                                   id={`edit-user-email-${user.id}`}
                                   type="email"
                                   value={editUserForm.email || ''}
-                                  onChange={(e) => setEditUserForm(prev => ({...prev, email: e.target.value}))}
+                                  onChange={(e) => setEditUserForm(prev => ({ ...prev, email: e.target.value }))}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -811,14 +815,14 @@ export default function ManagementDashboard() {
                                 <Input
                                   id={`edit-user-name-${user.id}`}
                                   value={editUserForm.name || ''}
-                                  onChange={(e) => setEditUserForm(prev => ({...prev, name: e.target.value}))}
+                                  onChange={(e) => setEditUserForm(prev => ({ ...prev, name: e.target.value }))}
                                 />
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor={`edit-user-role-${user.id}`}>Role</Label>
-                                <Select 
-                                  value={editUserForm.role || ''} 
-                                  onValueChange={(value) => setEditUserForm(prev => ({...prev, role: value}))}
+                                <Select
+                                  value={editUserForm.role || ''}
+                                  onValueChange={(value) => setEditUserForm(prev => ({ ...prev, role: value }))}
                                 >
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select role" />
@@ -835,7 +839,7 @@ export default function ManagementDashboard() {
                                   id={`edit-user-phone-${user.id}`}
                                   type="tel"
                                   value={editUserForm.phone || ''}
-                                  onChange={(e) => setEditUserForm(prev => ({...prev, phone: e.target.value}))}
+                                  onChange={(e) => setEditUserForm(prev => ({ ...prev, phone: e.target.value }))}
                                 />
                               </div>
                             </div>
@@ -925,7 +929,7 @@ export default function ManagementDashboard() {
                     <Input
                       id="newAccountName"
                       value={newAccount.name}
-                      onChange={(e) => setNewAccount(prev => ({...prev, name: e.target.value}))}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="e.g., John Doe"
                     />
                   </div>
@@ -934,7 +938,7 @@ export default function ManagementDashboard() {
                     <Input
                       id="newAccountNumber"
                       value={newAccount.number}
-                      onChange={(e) => setNewAccount(prev => ({...prev, number: e.target.value}))}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, number: e.target.value }))}
                       placeholder="e.g., ****4582"
                     />
                   </div>
@@ -945,7 +949,7 @@ export default function ManagementDashboard() {
                       type="number"
                       step="0.01"
                       value={newAccount.balance}
-                      onChange={(e) => setNewAccount(prev => ({...prev, balance: e.target.value}))}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, balance: e.target.value }))}
                       placeholder="0.00"
                     />
                   </div>
@@ -954,7 +958,7 @@ export default function ManagementDashboard() {
                     <Input
                       id="newAccountInterestRate"
                       value={newAccount.interestRate}
-                      onChange={(e) => setNewAccount(prev => ({...prev, interestRate: e.target.value}))}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, interestRate: e.target.value }))}
                       placeholder="e.g., 2.5%"
                     />
                   </div>
@@ -963,7 +967,7 @@ export default function ManagementDashboard() {
                     <Input
                       id="newAccountRouting"
                       value={newAccount.routing}
-                      onChange={(e) => setNewAccount(prev => ({...prev, routing: e.target.value}))}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, routing: e.target.value }))}
                       placeholder="e.g., 021000021"
                     />
                   </div>
@@ -973,12 +977,12 @@ export default function ManagementDashboard() {
                       id="newAccountOpenedDate"
                       type="date"
                       value={newAccount.openedDate}
-                      onChange={(e) => setNewAccount(prev => ({...prev, openedDate: e.target.value}))}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, openedDate: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newAccountType">Account Type</Label>
-                    <Select value={newAccount.type} onValueChange={(value) => setNewAccount(prev => ({...prev, type: value}))}>
+                    <Select value={newAccount.type} onValueChange={(value) => setNewAccount(prev => ({ ...prev, type: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -991,7 +995,7 @@ export default function ManagementDashboard() {
                     </Select>
                   </div>
                 </div>
-                <Button 
+                <Button
                   onClick={handleAddAccount}
                   disabled={isLoading}
                   className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
@@ -1024,7 +1028,7 @@ export default function ManagementDashboard() {
                                 <Input
                                   id={`edit-account-name-${account.id}`}
                                   value={editAccountForm.name || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({...prev, name: e.target.value}))}
+                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, name: e.target.value }))}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -1032,7 +1036,7 @@ export default function ManagementDashboard() {
                                 <Input
                                   id={`edit-account-number-${account.id}`}
                                   value={editAccountForm.number || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({...prev, number: e.target.value}))}
+                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, number: e.target.value }))}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -1042,7 +1046,7 @@ export default function ManagementDashboard() {
                                   type="number"
                                   step="0.01"
                                   value={editAccountForm.balance || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({...prev, balance: parseFloat(e.target.value) || 0}))}
+                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, balance: parseFloat(e.target.value) || 0 }))}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -1050,7 +1054,7 @@ export default function ManagementDashboard() {
                                 <Input
                                   id={`edit-account-interest-${account.id}`}
                                   value={editAccountForm.interestRate || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({...prev, interestRate: e.target.value}))}
+                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, interestRate: e.target.value }))}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -1058,7 +1062,7 @@ export default function ManagementDashboard() {
                                 <Input
                                   id={`edit-account-routing-${account.id}`}
                                   value={editAccountForm.routing || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({...prev, routing: e.target.value}))}
+                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, routing: e.target.value }))}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -1067,14 +1071,14 @@ export default function ManagementDashboard() {
                                   id={`edit-account-date-${account.id}`}
                                   type="date"
                                   value={editAccountForm.openedDate || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({...prev, openedDate: e.target.value}))}
+                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, openedDate: e.target.value }))}
                                 />
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor={`edit-account-type-${account.id}`}>Account Type</Label>
-                                <Select 
-                                  value={editAccountForm.type || ''} 
-                                  onValueChange={(value) => setEditAccountForm(prev => ({...prev, type: value}))}
+                                <Select
+                                  value={editAccountForm.type || ''}
+                                  onValueChange={(value) => setEditAccountForm(prev => ({ ...prev, type: value }))}
                                 >
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select type" />
@@ -1159,12 +1163,48 @@ export default function ManagementDashboard() {
         {/* Transactions Tab */}
         {activeTab === "transactions" && (
           <div className="space-y-6">
+            {/* User Selector */}
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Select User
+                </CardTitle>
+                <CardDescription>Choose which user's transactions to manage</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <Select
+                    value={selectedUserId}
+                    onValueChange={(value) => {
+                      setSelectedUserId(value);
+                      loadTransactions(value);
+                    }}
+                  >
+                    <SelectTrigger className="w-64">
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.filter(u => u.role === 'Customer').map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name} ({user.id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                    Managing: {users.find(u => u.id === selectedUserId)?.name || selectedUserId}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Add New Transaction */}
             <Card className="bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Plus className="w-5 h-5" />
-                  Add New Transaction
+                  Add New Transaction for {users.find(u => u.id === selectedUserId)?.name || selectedUserId}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1174,7 +1214,7 @@ export default function ManagementDashboard() {
                     <Input
                       id="transactionName"
                       value={newTransaction.name}
-                      onChange={(e) => setNewTransaction(prev => ({...prev, name: e.target.value}))}
+                      onChange={(e) => setNewTransaction(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="e.g., Coffee Shop"
                     />
                   </div>
@@ -1185,13 +1225,13 @@ export default function ManagementDashboard() {
                       type="number"
                       step="0.01"
                       value={newTransaction.amount}
-                      onChange={(e) => setNewTransaction(prev => ({...prev, amount: e.target.value}))}
+                      onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
                       placeholder="e.g., -5.67"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="transactionCategory">Category</Label>
-                    <Select value={newTransaction.category} onValueChange={(value) => setNewTransaction(prev => ({...prev, category: value}))}>
+                    <Select value={newTransaction.category} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, category: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
@@ -1209,7 +1249,7 @@ export default function ManagementDashboard() {
                     <Input
                       id="transactionMerchant"
                       value={newTransaction.merchant}
-                      onChange={(e) => setNewTransaction(prev => ({...prev, merchant: e.target.value}))}
+                      onChange={(e) => setNewTransaction(prev => ({ ...prev, merchant: e.target.value }))}
                       placeholder="e.g., Starbucks #4523"
                     />
                   </div>
@@ -1219,7 +1259,7 @@ export default function ManagementDashboard() {
                       id="transactionDate"
                       type="date"
                       value={newTransaction.date}
-                      onChange={(e) => setNewTransaction(prev => ({...prev, date: e.target.value}))}
+                      onChange={(e) => setNewTransaction(prev => ({ ...prev, date: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -1228,12 +1268,12 @@ export default function ManagementDashboard() {
                       id="transactionTime"
                       type="time"
                       value={newTransaction.time}
-                      onChange={(e) => setNewTransaction(prev => ({...prev, time: e.target.value}))}
+                      onChange={(e) => setNewTransaction(prev => ({ ...prev, time: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="transactionStatus">Status</Label>
-                    <Select value={newTransaction.status} onValueChange={(value) => setNewTransaction(prev => ({...prev, status: value}))}>
+                    <Select value={newTransaction.status} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, status: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
@@ -1246,7 +1286,7 @@ export default function ManagementDashboard() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="transactionType">Type</Label>
-                    <Select value={newTransaction.type} onValueChange={(value) => setNewTransaction(prev => ({...prev, type: value}))}>
+                    <Select value={newTransaction.type} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, type: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -1257,7 +1297,7 @@ export default function ManagementDashboard() {
                     </Select>
                   </div>
                 </div>
-                <Button 
+                <Button
                   onClick={handleAddTransaction}
                   className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
                 >
@@ -1286,7 +1326,7 @@ export default function ManagementDashboard() {
                               <Input
                                 id={`edit-name-${transaction.id}`}
                                 value={editForm.name}
-                                onChange={(e) => setEditForm(prev => ({...prev, name: e.target.value}))}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
                                 placeholder="e.g., Coffee Shop"
                               />
                             </div>
@@ -1297,13 +1337,13 @@ export default function ManagementDashboard() {
                                 type="number"
                                 step="0.01"
                                 value={editForm.amount}
-                                onChange={(e) => setEditForm(prev => ({...prev, amount: e.target.value}))}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))}
                                 placeholder="Enter amount"
                               />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor={`edit-category-${transaction.id}`}>Category</Label>
-                              <Select value={editForm.category} onValueChange={(value) => setEditForm(prev => ({...prev, category: value}))}>
+                              <Select value={editForm.category} onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select category" />
                                 </SelectTrigger>
@@ -1321,7 +1361,7 @@ export default function ManagementDashboard() {
                               <Input
                                 id={`edit-merchant-${transaction.id}`}
                                 value={editForm.merchant}
-                                onChange={(e) => setEditForm(prev => ({...prev, merchant: e.target.value}))}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, merchant: e.target.value }))}
                                 placeholder="e.g., Starbucks #4523"
                               />
                             </div>
@@ -1331,7 +1371,7 @@ export default function ManagementDashboard() {
                                 id={`edit-date-${transaction.id}`}
                                 type="date"
                                 value={editForm.date}
-                                onChange={(e) => setEditForm(prev => ({...prev, date: e.target.value}))}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
                               />
                             </div>
                             <div className="space-y-2">
@@ -1340,12 +1380,12 @@ export default function ManagementDashboard() {
                                 id={`edit-time-${transaction.id}`}
                                 type="time"
                                 value={editForm.time}
-                                onChange={(e) => setEditForm(prev => ({...prev, time: e.target.value}))}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
                               />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor={`edit-status-${transaction.id}`}>Status</Label>
-                              <Select value={editForm.status} onValueChange={(value) => setEditForm(prev => ({...prev, status: value}))}>
+                              <Select value={editForm.status} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
@@ -1358,7 +1398,7 @@ export default function ManagementDashboard() {
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor={`edit-type-${transaction.id}`}>Type</Label>
-                              <Select value={editForm.type} onValueChange={(value) => setEditForm(prev => ({...prev, type: value as 'deposit' | 'withdrawal'}))}>
+                              <Select value={editForm.type} onValueChange={(value) => setEditForm(prev => ({ ...prev, type: value as 'deposit' | 'withdrawal' }))}>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
@@ -1369,7 +1409,7 @@ export default function ManagementDashboard() {
                               </Select>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
                             <Button
                               onClick={handleSaveEdit}
@@ -1392,9 +1432,8 @@ export default function ManagementDashboard() {
                         // Display Mode
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
-                            }`}>
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
+                              }`}>
                               {transaction.amount > 0 ? (
                                 <TrendingUp className="w-5 h-5 text-amber-700" />
                               ) : (
@@ -1412,9 +1451,8 @@ export default function ManagementDashboard() {
                             <Badge variant={transaction.status === 'Processed' ? 'default' : transaction.status === 'Pending' ? 'secondary' : 'destructive'}>
                               {transaction.status}
                             </Badge>
-                            <p className={`font-semibold ${
-                              transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
-                            }`}>
+                            <p className={`font-semibold ${transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
+                              }`}>
                               {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
                             </p>
                             <div className="flex items-center gap-2">
@@ -1470,7 +1508,7 @@ export default function ManagementDashboard() {
                   <p className="text-slate-600">
                     Create a timestamped backup of all transactions. This will save the current state of your transaction data.
                   </p>
-                  <Button 
+                  <Button
                     onClick={handleCreateBackup}
                     disabled={isLoading}
                     className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
@@ -1505,7 +1543,7 @@ export default function ManagementDashboard() {
                   <p className="text-slate-600">
                     Select a backup file to restore. This will replace all current transactions with the backup data.
                   </p>
-                  
+
                   {backups.length > 0 ? (
                     <div className="space-y-2">
                       <Label>Available Backups:</Label>

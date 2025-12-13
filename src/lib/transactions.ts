@@ -11,10 +11,30 @@ export interface Transaction {
   type: "deposit" | "withdrawal";
 }
 
-// Get transactions from API
-export const getTransactions = async (): Promise<Transaction[]> => {
+// Get current user ID from localStorage
+const getCurrentUserId = (): string | undefined => {
+  if (typeof window === 'undefined') return undefined;
   try {
-    const response = await fetch('/api/transactions');
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      return parsed.id;
+    }
+  } catch (error) {
+    console.error('Error getting user ID:', error);
+  }
+  return undefined;
+};
+
+// Get transactions from API for current user
+export const getTransactions = async (userId?: string): Promise<Transaction[]> => {
+  try {
+    const effectiveUserId = userId || getCurrentUserId();
+    const url = effectiveUserId
+      ? `/api/transactions?userId=${effectiveUserId}`
+      : '/api/transactions';
+
+    const response = await fetch(url);
     const result = await response.json();
     return result.success ? result.data : [];
   } catch (error) {
@@ -49,15 +69,15 @@ export const getNetBalance = async () => {
 export const getAvailableBalance = async () => {
   const transactions = await getTransactions();
   const processedTransactions = transactions.filter(t => t.status === "Processed");
-  
+
   const totalDeposits = processedTransactions
     .filter(t => t.type === "deposit")
     .reduce((sum, t) => sum + t.amount, 0);
-    
+
   const totalWithdrawals = processedTransactions
     .filter(t => t.type === "withdrawal")
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    
+
   return totalDeposits - totalWithdrawals;
 };
 
@@ -76,7 +96,7 @@ export const getStatementData = async () => {
   const totalIncome = await getTotalIncome();
   const totalExpenses = await getTotalExpenses();
   const netBalance = await getNetBalance();
-  
+
   return {
     accountHolder: "Lisaglenn",
     accountNumber: "****4582",

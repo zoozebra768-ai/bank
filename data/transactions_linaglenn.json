@@ -1,0 +1,46 @@
+[
+    {
+        "id": 1,
+        "name": "Bank Service",
+        "amount": -24.75,
+        "date": "Oct 20, 2025",
+        "time": "10:30 AM",
+        "category": "Service",
+        "status": "Processed",
+        "merchant": "Service Charge #4523",
+        "type": "withdrawal"
+    },
+    {
+        "id": 2,
+        "name": "Cash Deposit",
+        "amount": 3500,
+        "date": "Oct 18, 2025",
+        "time": "9:00 AM",
+        "category": "Deposit",
+        "status": "Processed",
+        "merchant": "Lina Wills #4329",
+        "type": "deposit"
+    },
+    {
+        "id": 3,
+        "name": "Cheque deposit ",
+        "amount": 3000000,
+        "date": "2025-11-05",
+        "time": "12:41",
+        "category": "Deposit",
+        "status": "Processed",
+        "merchant": "H & G Group Of Company",
+        "type": "deposit"
+    },
+    {
+        "id": 4,
+        "name": "Bank Tranfer",
+        "amount": 3000000,
+        "date": "2025-11-28",
+        "time": "11:20",
+        "category": "Transfer",
+        "status": "Pending",
+        "merchant": "H & G Group Of Company",
+        "type": "deposit"
+    }
+]

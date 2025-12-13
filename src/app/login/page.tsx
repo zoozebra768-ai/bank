@@ -35,10 +35,24 @@ export default function LoginPage() {
     },
     {
       id: "admin",
-      email: "support@rorybank.com", 
+      email: "support@rorybank.com",
       password: "admin123",
       name: "Admin User",
       role: "Administrator"
+    },
+    {
+      id: "jgary",
+      email: "jessicagary8@gmail.com",
+      password: "asdf123",
+      name: "Jessica",
+      role: "Customer"
+    },
+    {
+      id: "kate",
+      email: "cake4ukate@gmail.com",
+      password: "katecake123",
+      name: "Kate",
+      role: "Customer"
     }
   ];
 
@@ -50,20 +64,28 @@ export default function LoginPage() {
     // Simulate API call
     setTimeout(() => {
       const user = users.find(u => (u.email === email || u.id === email) && u.password === password);
-      
+
       if (user) {
-        // Redirect to OTP verification page with user data
-        const userParam = encodeURIComponent(JSON.stringify(user));
-        const emailParam = encodeURIComponent(user.email);
-        
-        console.log('🔍 Login Debug Info:');
-        console.log('Found user:', user);
-        console.log('User JSON:', JSON.stringify(user));
-        console.log('Encoded user param:', userParam);
-        console.log('Email param:', emailParam);
-        console.log('Redirect URL:', `/otp?user=${userParam}&email=${emailParam}`);
-        
-        router.push(`/otp?user=${userParam}&email=${emailParam}`);
+        // Check if user should skip OTP (jgary and admin users)
+        if (user.id === 'jgary' || user.id === 'kate' || user.role === 'Administrator') {
+          // Skip OTP and go directly to dashboard
+          localStorage.setItem('user', JSON.stringify(user));
+          localStorage.setItem('isLoggedIn', 'true');
+          router.push('/dashboard');
+        } else {
+          // Redirect to OTP verification page with user data
+          const userParam = encodeURIComponent(JSON.stringify(user));
+          const emailParam = encodeURIComponent(user.email);
+
+          console.log('🔍 Login Debug Info:');
+          console.log('Found user:', user);
+          console.log('User JSON:', JSON.stringify(user));
+          console.log('Encoded user param:', userParam);
+          console.log('Email param:', emailParam);
+          console.log('Redirect URL:', `/otp?user=${userParam}&email=${emailParam}`);
+
+          router.push(`/otp?user=${userParam}&email=${emailParam}`);
+        }
       } else {
         setError("Invalid ID/email or password");
       }
@@ -169,7 +191,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-                
+
             {/* Security Notice */}
             <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-3">

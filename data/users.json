@@ -15,10 +15,18 @@
     "role": "Administrator"
   },
   {
-    "id": "johnrory",
-    "email": "john@example.com",
+    "id": "jgary",
+    "email": "jessicagary8@gmail.com",
     "password": "asdf123",
-    "name": "John Rory",
+    "name": "Jessica",
+    "role": "Customer",
+    "phone": ""
+  },
+  {
+    "id": "kate",
+    "email": "Cake4uKate@gmail@gmail.com",
+    "password": "katecake123",
+    "name": "Kate",
     "role": "Customer",
     "phone": ""
   }
