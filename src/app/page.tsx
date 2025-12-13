@@ -300,7 +300,7 @@ export default function LandingPage() {
               </Card>
               <Card className="bg-white">
                 <CardHeader>
-                  <CardTitle className="text-slate-900 text-3xl">₵0</CardTitle>
+                  <CardTitle className="text-slate-900 text-3xl">0</CardTitle>
                   <CardDescription>Monthly Fees</CardDescription>
                 </CardHeader>
               </Card>
