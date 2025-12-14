@@ -321,7 +321,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Recent Transactions Section */}
+      {/* Recent Transactions Section
       {loginStatus && (
         <section className="py-20 px-6 bg-white">
           <div className="max-w-7xl mx-auto">
@@ -389,7 +389,7 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-      )}
+      )} */}
 
       {/* CTA Section */}
       <section className="py-20 px-6 bg-gradient-to-br from-amber-600 to-orange-700">
