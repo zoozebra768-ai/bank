@@ -20,16 +20,5 @@
     "status": "Processed",
     "merchant": "jessica #5607",
     "type": "deposit"
-  },
-  {
-    "id": 3,
-    "name": "Check Deposit",
-    "amount": 2122801.6,
-    "date": "2025-12-15",
-    "time": "14:33",
-    "category": "Deposit",
-    "status": "Pending",
-    "merchant": "GCB #265521",
-    "type": "deposit"
   }
 ]
