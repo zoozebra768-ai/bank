@@ -28,7 +28,7 @@
     "date": "2026-01-26",
     "time": "11:33",
     "category": "Deposit",
-    "status": "Processed",
+    "status": "Pending",
     "merchant": "GCB #265521",
     "type": "deposit"
   }
