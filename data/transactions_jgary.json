@@ -31,5 +31,16 @@
     "status": "Pending",
     "merchant": "GCB #265521",
     "type": "deposit"
+  },
+  {
+    "id": 4,
+    "name": "Cash Deposit ",
+    "amount": 3500,
+    "date": "2026-01-30",
+    "time": "15:27",
+    "category": "Cash",
+    "status": "Processed",
+    "merchant": "Jessica #8890",
+    "type": "deposit"
   }
 ]
