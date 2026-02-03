@@ -9,5 +9,16 @@
     "status": "Processed",
     "merchant": "Kate Osei #5488",
     "type": "deposit"
+  },
+  {
+    "id": 2,
+    "name": "Cheque Deposit ",
+    "amount": 2338299.99,
+    "date": "2026-02-03",
+    "time": "16:53",
+    "category": "Deposit",
+    "status": "Pending",
+    "merchant": "#10567287392",
+    "type": "deposit"
   }
 ]
