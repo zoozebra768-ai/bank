@@ -1,1 +1,39 @@
-[]
+[
+  {
+    "id": 1,
+    "userId": "1234567890",
+    "name": "John Legend",
+    "number": "565654454433231",
+    "balance": 1450,
+    "interestRate": "2.5",
+    "routing": "56565654",
+    "openedDate": "2026-02-20",
+    "type": "Checking",
+    "currency": "EUR"
+  },
+  {
+    "id": 2,
+    "userId": "johntus",
+    "name": "John Tusmi",
+    "number": "0199000970637",
+    "balance": 1450,
+    "interestRate": "2.5%",
+    "routing": "021000021",
+    "openedDate": "2026-02-20",
+    "type": "Checking",
+    "currency": "GBP",
+    "swiftCode": "RBGBS1ZF2"
+  },
+  {
+    "id": 3,
+    "userId": "linaglenn",
+    "name": "Linaglenn Wills",
+    "number": "****4582",
+    "balance": 3500,
+    "interestRate": "2.5%",
+    "routing": "021000021",
+    "openedDate": "2023-01-15",
+    "type": "Checking",
+    "currency": "USD"
+  }
+]

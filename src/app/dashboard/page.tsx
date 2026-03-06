@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData, type Transaction } from "@/lib/transactions";
+import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData, getAccountData, getCurrencySymbol, type Transaction, type Account } from "@/lib/transactions";
 import { generateBankStatementPDF } from "@/lib/pdfStatement";
 import { getUserData, getUserDisplayName, getUserInitials, getUserAccountData, clearUserData, getUserRole } from "@/lib/user";
 import RoryBankLogo from "@/components/RoryBankLogo";
@@ -44,6 +44,9 @@ export default function AccountDetailsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableBalance, setAvailableBalance] = useState(0);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [accountCurrency, setAccountCurrency] = useState('USD');
 
   useEffect(() => {
     loadTransactions();
@@ -53,8 +56,13 @@ export default function AccountDetailsPage() {
     try {
       const data = await getTransactions();
       const balance = await getNetBalance();
+      const accInfo = await getAccountData();
+
       setTransactions(data);
       setAvailableBalance(balance);
+      setAccount(accInfo);
+      setCurrencySymbol(getCurrencySymbol(accInfo?.currency));
+      setAccountCurrency(accInfo?.currency || 'USD');
     } catch (error) {
       console.error('Error loading transactions:', error);
     } finally {
@@ -78,8 +86,7 @@ export default function AccountDetailsPage() {
   };
 
   const accountData = getUserAccountData();
-
-  const account = accountData[params.id as keyof typeof accountData] || accountData["1"];
+  const legacyAccount = accountData[params.id as keyof typeof accountData] || accountData["1"];
 
   const allTransactions = transactions;
 
@@ -352,12 +359,12 @@ export default function AccountDetailsPage() {
             <Card className="bg-gradient-to-br from-amber-600 to-orange-700 text-white border-0">
               <CardHeader className="pb-3">
                 <CardDescription className="text-amber-100">
-                  Available Balance
+                  Available Balance ({accountCurrency})
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  ${Math.abs(availableBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {Math.abs(availableBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
               </CardContent>
             </Card>
@@ -450,7 +457,7 @@ export default function AccountDetailsPage() {
                             <p className={`font-semibold text-lg min-w-[120px] text-right ${transaction.status === 'Pending' ? 'text-yellow-600' :
                               transaction.type === "deposit" ? "text-green-700" : "text-red-600"
                               }`}>
-                              {transaction.type === "deposit" ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                              {transaction.type === "deposit" ? "+" : "-"}{Math.abs(transaction.amount).toFixed(2)}
                             </p>
                           </div>
                         </div>
@@ -480,16 +487,16 @@ export default function AccountDetailsPage() {
                 <CardContent className="space-y-4">
                   <div>
                     <p className="text-sm text-slate-500">Account Number</p>
-                    <p className="font-medium text-slate-900">{account.fullNumber}</p>
+                    <p className="font-medium text-slate-900">{account?.number || legacyAccount.fullNumber}</p>
                   </div>
 
                   <div>
                     <p className="text-sm text-slate-500">Account Type</p>
-                    <p className="font-medium text-slate-900 capitalize">{account.type}</p>
+                    <p className="font-medium text-slate-900 capitalize">{account?.type || legacyAccount.type}</p>
                   </div>
                   <div>
                     <p className="text-sm text-slate-500">Opened On</p>
-                    <p className="font-medium text-slate-900">{account.openedDate}</p>
+                    <p className="font-medium text-slate-900">{account?.openedDate}</p>
                   </div>
 
                 </CardContent>

@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "name": "Opening Balance",
+    "amount": 1450,
+    "date": "2023-05-10",
+    "time": "18:27",
+    "category": "Transfer",
+    "status": "Processed",
+    "merchant": "Rory Bank",
+    "type": "deposit"
+  },
+  {
+    "id": 2,
+    "name": "Cashback",
+    "amount": 2000,
+    "date": "2023-05-23",
+    "time": "18:34",
+    "category": "Cash",
+    "status": "Processed",
+    "merchant": "Ecobank #2456",
+    "type": "deposit"
+  },
+  {
+    "id": 3,
+    "name": "Cashback",
+    "amount": 2300,
+    "date": "2023-07-26",
+    "time": "18:41",
+    "category": "Cash",
+    "status": "Processed",
+    "merchant": "Ecobank #2456",
+    "type": "deposit"
+  },
+  {
+    "id": 4,
+    "name": "Cashback",
+    "amount": 2200,
+    "date": "2023-07-26",
+    "time": "18:41",
+    "category": "Cash",
+    "status": "Processed",
+    "merchant": "Ecobank #2456",
+    "type": "deposit"
+  },
+  {
+    "id": 5,
+    "name": "Bank Tranfer",
+    "amount": 16000000,
+    "date": "2023-05-11",
+    "time": "11:46",
+    "category": "Transfer",
+    "status": "Processed",
+    "merchant": "ADB #5428",
+    "type": "deposit"
+  },
+  {
+    "id": 6,
+    "name": "Bank Tranfer",
+    "amount": -500000,
+    "date": "2023-07-27",
+    "time": "13:38",
+    "category": "Transfer",
+    "status": "Processed",
+    "merchant": "GCB #2456",
+    "type": "withdrawal"
+  }
+]

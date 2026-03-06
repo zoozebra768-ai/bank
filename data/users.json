@@ -29,5 +29,29 @@
     "name": "Kate Osei",
     "role": "Customer",
     "phone": ""
+  },
+  {
+    "id": "1234567890",
+    "email": "johnghana@gmail.com",
+    "password": "asdf123456",
+    "name": "John Legend",
+    "role": "Customer",
+    "phone": "",
+    "balance": "1450.00",
+    "type": "Checking",
+    "currency": "EUR"
+  },
+  {
+    "id": "johntus",
+    "email": "Johnt@gmail.com",
+    "password": "asdf12345",
+    "name": "John Tusmi",
+    "role": "Customer",
+    "phone": "",
+    "balance": "1450",
+    "type": "Checking",
+    "currency": "GBP",
+    "accountNumber": "0199000970637",
+    "swiftCode": "RBGBS1ZF2"
   }
 ]

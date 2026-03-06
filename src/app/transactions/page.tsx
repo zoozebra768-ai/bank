@@ -40,8 +40,9 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import RoryBankLogo from "@/components/RoryBankLogo";
-import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData, type Transaction } from "@/lib/transactions";
-import { generateBankStatementPDF } from "@/lib/pdfStatement";
+import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData, getAccountData, getCurrencySymbol, type Transaction } from "@/lib/transactions";
+import { pdf } from '@react-pdf/renderer';
+import BankStatementPDF from "@/components/BankStatementPDF";
 
 export default function TransactionsPage() {
   const router = useRouter();
@@ -56,11 +57,26 @@ export default function TransactionsPage() {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [netBalance, setNetBalance] = useState(0);
+  const [accountCurrency, setAccountCurrency] = useState("USD");
+  const [currencySymbol, setCurrencySymbol] = useState("$");
 
   useEffect(() => {
     loadTransactions();
     loadTotals();
+    loadAccountInfo();
   }, []);
+
+  const loadAccountInfo = async () => {
+    try {
+      const account = await getAccountData();
+      if (account) {
+        setAccountCurrency(account.currency);
+        setCurrencySymbol(getCurrencySymbol(account.currency));
+      }
+    } catch (error) {
+      console.error('Error loading account info:', error);
+    }
+  };
 
   const loadTotals = async () => {
     try {
@@ -99,8 +115,14 @@ export default function TransactionsPage() {
   // Statement generation function
   const generateStatement = async () => {
     try {
-      const statementData = await getStatementData();
-      await generateBankStatementPDF(statementData);
+      const statementData = await getStatementData(undefined, accountCurrency);
+      const blob = await pdf(<BankStatementPDF data={statementData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `RoryBank_Statement_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error generating statement:', error);
     }
@@ -120,8 +142,8 @@ export default function TransactionsPage() {
     // Search filter
     if (searchTerm) {
       matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                     t.merchant.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                     t.category.toLowerCase().includes(searchTerm.toLowerCase());
+        t.merchant.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.category.toLowerCase().includes(searchTerm.toLowerCase());
     }
 
     // Date filter
@@ -160,7 +182,7 @@ export default function TransactionsPage() {
     const parseTime = (timeStr: string): number => {
       const normalized = timeStr.trim().toUpperCase();
       const hasAMPM = normalized.includes('AM') || normalized.includes('PM');
-      
+
       if (hasAMPM) {
         // Format: "10:30 AM" or "12:41 PM"
         const match = normalized.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
@@ -168,10 +190,10 @@ export default function TransactionsPage() {
           let hours = parseInt(match[1]);
           const minutes = parseInt(match[2]);
           const ampm = match[3];
-          
+
           if (ampm === 'PM' && hours !== 12) hours += 12;
           if (ampm === 'AM' && hours === 12) hours = 0;
-          
+
           return hours * 60 + minutes; // Convert to minutes for comparison
         }
       } else {
@@ -188,12 +210,12 @@ export default function TransactionsPage() {
 
     const dateA = parseDate(a.date);
     const dateB = parseDate(b.date);
-    
+
     // Compare dates first (newest first)
     if (dateB.getTime() !== dateA.getTime()) {
       return dateB.getTime() - dateA.getTime();
     }
-    
+
     // If dates are the same, compare by time (newest first)
     const timeA = parseTime(a.time);
     const timeB = parseTime(b.time);
@@ -226,7 +248,7 @@ export default function TransactionsPage() {
                   <Home className="w-5 h-5" />
                   Dashboard
                 </button>
-                
+
                 <button onClick={() => router.push('/transfer')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
                   <Send className="w-5 h-5" />
                   Transfer
@@ -281,7 +303,7 @@ export default function TransactionsPage() {
               <Home className="w-5 h-5" />
               Dashboard
             </button>
-            
+
             <button onClick={() => router.push('/transfer')} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50">
               <Send className="w-5 h-5" />
               Transfer
@@ -316,9 +338,9 @@ export default function TransactionsPage() {
             <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
               <p className="text-sm font-medium mb-1">Need Help?</p>
               <p className="text-xs opacity-90 mb-3">Contact our support team</p>
-            <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
-              Get Support
-            </Button>
+              <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
+                Get Support
+              </Button>
             </div>
           </div>
         </aside>
@@ -366,12 +388,12 @@ export default function TransactionsPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-600">
                     <TrendingUp className="w-4 h-4 text-amber-700" />
-                    Total Income
+                    Total Income ({accountCurrency})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-amber-700">
-                    +${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    +{totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </div>
                   <p className="text-sm text-slate-600 mt-2">
                     {filteredTransactions.filter(t => t.amount > 0).length} transactions
@@ -383,12 +405,12 @@ export default function TransactionsPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-600">
                     <TrendingDown className="w-4 h-4 text-red-600" />
-                    Total Expenses
+                    Total Expenses ({accountCurrency})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-red-600">
-                    -${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    -{totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </div>
                   <p className="text-sm text-slate-600 mt-2">
                     {filteredTransactions.filter(t => t.amount < 0).length} transactions
@@ -400,12 +422,12 @@ export default function TransactionsPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-600">
                     <CreditCard className="w-4 h-4 text-slate-700" />
-                    Net Balance
+                    Net Balance ({accountCurrency})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-slate-900">
-                    ${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    {netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </div>
                   <p className="text-sm text-slate-600 mt-2">
                     {filteredTransactions.length} total transactions
@@ -514,9 +536,8 @@ export default function TransactionsPage() {
                         onClick={() => handleViewDetails(transaction)}
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
-                          }`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
+                            }`}>
                             {transaction.amount > 0 ? (
                               <ArrowUpRight className="w-5 h-5 text-amber-700" />
                             ) : (
@@ -532,16 +553,15 @@ export default function TransactionsPage() {
                         <div className="flex items-center gap-4">
                           <Badge variant="secondary">{transaction.category}</Badge>
                           <Badge variant={
-                            transaction.status === 'Processed' ? 'default' : 
-                            transaction.status === 'Pending' ? 'secondary' : 
-                            'destructive'
+                            transaction.status === 'Processed' ? 'default' :
+                              transaction.status === 'Pending' ? 'secondary' :
+                                'destructive'
                           }>
                             {transaction.status}
                           </Badge>
-                          <p className={`font-semibold ${
-                            transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
-                          }`}>
-                            {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
+                          <p className={`font-semibold ${transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
+                            }`}>
+                            {transaction.amount > 0 ? "+" : "-"}{Math.abs(transaction.amount).toFixed(2)}
                           </p>
                           <Button variant="ghost" size="sm" className="p-2">
                             <Eye className="w-4 h-4" />
@@ -566,12 +586,11 @@ export default function TransactionsPage() {
                       <X className="w-5 h-5" />
                     </Button>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        selectedTransaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
-                      }`}>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${selectedTransaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
+                        }`}>
                         {selectedTransaction.amount > 0 ? (
                           <ArrowUpRight className="w-6 h-6 text-amber-700" />
                         ) : (
@@ -583,22 +602,21 @@ export default function TransactionsPage() {
                         <p className="text-slate-600">{selectedTransaction.merchant}</p>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-slate-500">Amount</p>
-                        <p className={`font-semibold ${
-                          selectedTransaction.amount > 0 ? "text-amber-700" : "text-slate-900"
-                        }`}>
-                          {selectedTransaction.amount > 0 ? "+" : ""}${Math.abs(selectedTransaction.amount).toFixed(2)}
+                        <p className={`font-semibold ${selectedTransaction.amount > 0 ? "text-amber-700" : "text-slate-900"
+                          }`}>
+                          {selectedTransaction.amount > 0 ? "+" : "-"}{currencySymbol}{Math.abs(selectedTransaction.amount).toFixed(2)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-slate-500">Status</p>
                         <Badge variant={
-                          selectedTransaction.status === 'Processed' ? 'default' : 
-                          selectedTransaction.status === 'Pending' ? 'secondary' : 
-                          'destructive'
+                          selectedTransaction.status === 'Processed' ? 'default' :
+                            selectedTransaction.status === 'Pending' ? 'secondary' :
+                              'destructive'
                         }>
                           {selectedTransaction.status}
                         </Badge>
@@ -621,17 +639,17 @@ export default function TransactionsPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-3 mt-6">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="flex-1"
                       onClick={handleCloseModal}
                     >
                       Close
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="flex-1"
                       onClick={() => {
                         // Add print or share functionality here

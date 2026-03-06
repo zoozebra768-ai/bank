@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "name": "Bank Transfer",
+    "amount": 16000000,
+    "date": "2025-12-04",
+    "time": "15:27",
+    "category": "Transfer",
+    "status": "Processed",
+    "merchant": "Ecobank #2456",
+    "type": "deposit"
+  }
+]

@@ -34,7 +34,9 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import RoryBankLogo from "@/components/RoryBankLogo";
-import { type Transaction, adminAddTransaction, adminUpdateTransaction, adminDeleteTransaction, adminBackupTransactions, adminRestoreTransactions, adminGetBackups } from "@/lib/transactions";
+import { pdf } from '@react-pdf/renderer';
+import BankStatementPDF from "@/components/BankStatementPDF";
+import { type Transaction, adminAddTransaction, adminUpdateTransaction, adminDeleteTransaction, adminBackupTransactions, adminRestoreTransactions, adminGetBackups, getStatementData } from "@/lib/transactions";
 import { getUserRole, clearUserData } from "@/lib/user";
 
 export default function ManagementDashboard() {
@@ -56,6 +58,8 @@ export default function ManagementDashboard() {
     routing: string;
     openedDate: string;
     type: string;
+    currency: string;
+    swiftCode?: string;
   }
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -68,7 +72,9 @@ export default function ManagementDashboard() {
     interestRate: "",
     routing: "",
     openedDate: new Date().toISOString().split('T')[0],
-    type: "Checking"
+    type: "Checking",
+    currency: "USD",
+    swiftCode: ""
   });
 
   // User data state
@@ -78,6 +84,11 @@ export default function ManagementDashboard() {
     name: string;
     role: string;
     phone?: string;
+    balance?: string;
+    type?: string;
+    currency?: string;
+    accountNumber?: string;
+    swiftCode?: string;
   }
 
   const [users, setUsers] = useState<User[]>([]);
@@ -89,12 +100,21 @@ export default function ManagementDashboard() {
     password: "",
     name: "",
     role: "Customer",
-    phone: ""
+    phone: "",
+    initialBalance: "500.00",
+    accountType: "Checking",
+    currency: "USD",
+    accountNumber: "",
+    swiftCode: ""
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [backups, setBackups] = useState<{ filename: string; created: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("linaglenn"); // Default to linaglenn
+  const [statementRange, setStatementRange] = useState({
+    from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Jan 1st of current year
+    to: new Date().toISOString().split('T')[0] // Today
+  });
   const [editingTransaction, setEditingTransaction] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -213,7 +233,9 @@ export default function ManagementDashboard() {
           interestRate: "",
           routing: "",
           openedDate: new Date().toISOString().split('T')[0],
-          type: "Checking"
+          type: "Checking",
+          currency: "USD",
+          swiftCode: ""
         });
         setMessage("Account created successfully");
       } else {
@@ -235,7 +257,9 @@ export default function ManagementDashboard() {
       interestRate: account.interestRate,
       routing: account.routing,
       openedDate: account.openedDate,
-      type: account.type
+      type: account.type,
+      currency: account.currency,
+      swiftCode: account.swiftCode || ""
     });
   };
 
@@ -291,41 +315,107 @@ export default function ManagementDashboard() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/admin/users', {
+      // 1. Create User
+      const userResponse = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify({
+          id: newUser.id,
+          email: newUser.email,
+          password: newUser.password,
+          name: newUser.name,
+          role: newUser.role,
+          phone: newUser.phone
+        })
       });
 
-      const data = await response.json();
-      if (data.success) {
-        setUsers(prev => [data.data, ...prev]);
+      const userData = await userResponse.json();
+      if (userData.success) {
+        setUsers(prev => [userData.data, ...prev]);
+
+        // 2. Automatically Create Default Account
+        const accountNumber = newUser.accountNumber || ("****" + Math.floor(1000 + Math.random() * 9000));
+        const accountResponse = await fetch('/api/admin/accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: newUser.id,
+            name: newUser.name,
+            number: accountNumber,
+            balance: newUser.initialBalance,
+            interestRate: "2.5%",
+            routing: "021000021",
+            openedDate: new Date().toISOString().split('T')[0],
+            type: newUser.accountType,
+            currency: newUser.currency,
+            swiftCode: newUser.swiftCode || "SBGAKACC"
+          })
+        });
+
+        const accountData = await accountResponse.json();
+        if (accountData.success) {
+          setAccounts(prev => [accountData.data, ...prev]);
+
+          // 3. Create Initial Deposit Transaction
+          await fetch('/api/admin/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: newUser.id,
+              name: "Opening Balance",
+              amount: newUser.initialBalance,
+              date: new Date().toISOString().split('T')[0],
+              time: new Date().toTimeString().slice(0, 5),
+              category: "Transfer",
+              status: "Processed",
+              merchant: "Rory Bank",
+              type: "deposit"
+            })
+          });
+
+          setMessage("User, account, and initial deposit recorded successfully");
+        } else {
+          setMessage("User created, but failed to create default account");
+        }
+
         setNewUser({
           id: "",
           email: "",
           password: "",
           name: "",
           role: "Customer",
-          phone: ""
+          phone: "",
+          initialBalance: "500.00",
+          accountType: "Checking",
+          currency: newUser.currency,
+          accountNumber: "",
+          swiftCode: ""
         });
-        setMessage("User created successfully");
       } else {
-        setMessage(data.error || "Failed to create user");
+        setMessage(userData.error || "Failed to create user");
       }
     } catch (error) {
-      setMessage("Error creating user");
+      setMessage("Error creating user and account");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleStartEditUser = (user: User) => {
+    // Find the associated account by userId
+    const userAccount = accounts.find(a => (a as any).userId === user.id);
+
     setEditingUser(user.id);
     setEditUserForm({
       email: user.email,
       name: user.name,
       role: user.role,
-      phone: user.phone || ""
+      phone: user.phone || "",
+      balance: userAccount?.balance.toString() || "0.00",
+      type: userAccount?.type || "Checking",
+      currency: userAccount?.currency || "USD",
+      accountNumber: userAccount?.number || "",
+      swiftCode: userAccount?.swiftCode || ""
     });
   };
 
@@ -342,7 +432,63 @@ export default function ManagementDashboard() {
 
       const data = await response.json();
       if (data.success) {
-        setMessage("User updated successfully");
+        // Find the associated account by userId
+        const userAccount = accounts.find(a => (a as any).userId === editingUser);
+
+        let accountUpdateMessage = "";
+        if (userAccount) {
+          const accountResp = await fetch('/api/admin/accounts', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: userAccount.id,
+              balance: editUserForm.balance,
+              type: editUserForm.type,
+              currency: editUserForm.currency,
+              name: editUserForm.name,
+              number: editUserForm.accountNumber,
+              swiftCode: editUserForm.swiftCode
+            })
+          });
+          const accountData = await accountResp.json();
+          if (accountData.success) {
+            await loadAccounts();
+
+            // Sync with Transaction: Find and update the "Opening Balance" or "Initial Deposit" transaction
+            try {
+              const transResp = await fetch(`/api/admin/transactions?userId=${editingUser}`);
+              const transData = await transResp.json();
+              if (transData.success) {
+                const openingTrans = transData.data.find((t: any) =>
+                  t.name === "Opening Balance" || t.name === "Initial Deposit" || t.name === "Cash Deposit"
+                );
+
+                if (openingTrans) {
+                  await fetch('/api/admin/transactions', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      id: openingTrans.id,
+                      userId: editingUser,
+                      amount: editUserForm.balance,
+                      name: "Opening Balance" // Normalize the name on update
+                    })
+                  });
+                }
+              }
+            } catch (e) {
+              console.error("Failed to sync transaction balance", e);
+            }
+
+            accountUpdateMessage = " and account updated";
+          } else {
+            accountUpdateMessage = " (account update failed)";
+          }
+        } else {
+          accountUpdateMessage = " (linked account not found)";
+        }
+
+        setMessage(`User updated${accountUpdateMessage} successfully`);
         await loadUsers();
         setEditingUser(null);
         setEditUserForm({});
@@ -416,10 +562,17 @@ export default function ManagementDashboard() {
 
     setIsLoading(true);
     try {
+      const amount = parseFloat(newTransaction.amount);
+      const normalizedAmount = newTransaction.type === 'withdrawal' ? -Math.abs(amount) : Math.abs(amount);
+
       const response = await fetch('/api/admin/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newTransaction, userId: selectedUserId })
+        body: JSON.stringify({
+          ...newTransaction,
+          amount: normalizedAmount,
+          userId: selectedUserId
+        })
       });
 
       const data = await response.json();
@@ -493,9 +646,12 @@ export default function ManagementDashboard() {
 
     setIsLoading(true);
     try {
+      const amount = parseFloat(editForm.amount);
+      const normalizedAmount = editForm.type === 'withdrawal' ? -Math.abs(amount) : Math.abs(amount);
+
       const updates = {
         name: editForm.name,
-        amount: parseFloat(editForm.amount),
+        amount: normalizedAmount,
         date: editForm.date,
         time: editForm.time,
         category: editForm.category,
@@ -578,6 +734,36 @@ export default function ManagementDashboard() {
       }
     } catch (error) {
       setMessage("Error restoring backup");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAdminDownloadStatement = async () => {
+    if (!selectedUserId) {
+      setMessage("Please select a user first");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Find the account currency for the selected user
+      const userAccount = accounts.find(a => a.name.toLowerCase() === selectedUserId.toLowerCase());
+      const currency = userAccount?.currency || 'USD';
+
+      const statementData = await getStatementData(selectedUserId, currency, statementRange.from, statementRange.to);
+      const blob = await pdf(<BankStatementPDF data={statementData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const userName = users.find(u => u.id === selectedUserId)?.name || selectedUserId;
+      link.download = `Statement_${userName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setMessage("Statement generated successfully");
+    } catch (error) {
+      console.error('Error generating statement:', error);
+      setMessage("Error generating statement");
     } finally {
       setIsLoading(false);
     }
@@ -773,6 +959,71 @@ export default function ManagementDashboard() {
                     />
                   </div>
                 </div>
+
+                <div className="mt-6 pt-6 border-t border-slate-200">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-amber-600" />
+                    Account Initialization
+                  </h3>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserInitialBalance">Initial Balance</Label>
+                      <Input
+                        id="newUserInitialBalance"
+                        type="number"
+                        value={newUser.initialBalance}
+                        onChange={(e) => setNewUser(prev => ({ ...prev, initialBalance: e.target.value }))}
+                        placeholder="e.g., 500.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserAccountType">Account Type</Label>
+                      <Select value={newUser.accountType} onValueChange={(value) => setNewUser(prev => ({ ...prev, accountType: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Checking">Checking</SelectItem>
+                          <SelectItem value="Savings">Savings</SelectItem>
+                          <SelectItem value="Credit">Credit</SelectItem>
+                          <SelectItem value="Investment">Investment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserCurrency">Currency</Label>
+                      <Select value={newUser.currency} onValueChange={(value) => setNewUser(prev => ({ ...prev, currency: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD ($)</SelectItem>
+                          <SelectItem value="GHS">GHS (₵)</SelectItem>
+                          <SelectItem value="EUR">EUR (€)</SelectItem>
+                          <SelectItem value="GBP">GBP (£)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserAccountNumber">Account Number (Optional)</Label>
+                      <Input
+                        id="newUserAccountNumber"
+                        value={newUser.accountNumber}
+                        onChange={(e) => setNewUser(prev => ({ ...prev, accountNumber: e.target.value }))}
+                        placeholder="e.g., 12345678"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserSwiftCode">SWIFT Code (Optional)</Label>
+                      <Input
+                        id="newUserSwiftCode"
+                        value={newUser.swiftCode}
+                        onChange={(e) => setNewUser(prev => ({ ...prev, swiftCode: e.target.value }))}
+                        placeholder="e.g., SBGAKACC"
+                      />
+                    </div>
+                  </div>
+                </div>
                 <Button
                   onClick={handleAddUser}
                   disabled={isLoading}
@@ -834,7 +1085,6 @@ export default function ManagementDashboard() {
                                 </Select>
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor={`edit-user-phone-${user.id}`}>Phone (Optional)</Label>
                                 <Input
                                   id={`edit-user-phone-${user.id}`}
                                   type="tel"
@@ -843,6 +1093,72 @@ export default function ManagementDashboard() {
                                 />
                               </div>
                             </div>
+
+                            <div className="pt-4 border-t border-slate-100">
+                              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Linked Account Settings</p>
+                              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-user-balance-${user.id}`}>Balance</Label>
+                                  <Input
+                                    id={`edit-user-balance-${user.id}`}
+                                    type="number"
+                                    value={editUserForm.balance || ''}
+                                    onChange={(e) => setEditUserForm(prev => ({ ...prev, balance: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-user-type-${user.id}`}>Account Type</Label>
+                                  <Select
+                                    value={editUserForm.type || ''}
+                                    onValueChange={(value) => setEditUserForm(prev => ({ ...prev, type: value }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Checking">Checking</SelectItem>
+                                      <SelectItem value="Savings">Savings</SelectItem>
+                                      <SelectItem value="Credit">Credit</SelectItem>
+                                      <SelectItem value="Investment">Investment</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-user-currency-${user.id}`}>Currency</Label>
+                                  <Select
+                                    value={editUserForm.currency || ''}
+                                    onValueChange={(value) => setEditUserForm(prev => ({ ...prev, currency: value }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select currency" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="USD">USD ($)</SelectItem>
+                                      <SelectItem value="GHS">GHS (₵)</SelectItem>
+                                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                                      <SelectItem value="GBP">GBP (£)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-user-account-number-${user.id}`}>Account Number</Label>
+                                  <Input
+                                    id={`edit-user-account-number-${user.id}`}
+                                    value={editUserForm.accountNumber || ''}
+                                    onChange={(e) => setEditUserForm(prev => ({ ...prev, accountNumber: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-user-swift-code-${user.id}`}>SWIFT Code</Label>
+                                  <Input
+                                    id={`edit-user-swift-code-${user.id}`}
+                                    value={editUserForm.swiftCode || ''}
+                                    onChange={(e) => setEditUserForm(prev => ({ ...prev, swiftCode: e.target.value }))}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
                             <div className="flex items-center gap-2">
                               <Button
                                 onClick={handleSaveEditUser}
@@ -870,7 +1186,9 @@ export default function ManagementDashboard() {
                               </div>
                               <div>
                                 <p className="font-medium text-slate-900">{user.name}</p>
-                                <p className="text-sm text-slate-500">ID: {user.id}</p>
+                                <p className="text-sm text-slate-500">
+                                  ID: {user.id} | Account: {accounts.find(a => (a as any).userId === user.id)?.number || "N/A"} | SWIFT: {accounts.find(a => (a as any).userId === user.id)?.swiftCode || "N/A"}
+                                </p>
                                 <p className="text-xs text-slate-400">{user.email}</p>
                                 {user.phone && (
                                   <p className="text-xs text-slate-400">Phone: {user.phone}</p>
@@ -909,192 +1227,595 @@ export default function ManagementDashboard() {
               </CardContent>
             </Card>
           </div>
-        )}
+        )
+        }
 
         {/* Accounts Tab */}
-        {activeTab === "accounts" && (
-          <div className="space-y-6">
-            {/* Add New Account */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="w-5 h-5" />
-                  Create New Account
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="newAccountName">Account Name</Label>
-                    <Input
-                      id="newAccountName"
-                      value={newAccount.name}
-                      onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., John Doe"
-                    />
+        {
+          activeTab === "accounts" && (
+            <div className="space-y-6">
+              {/* Add New Account */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    Create New Account
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountName">Account Name</Label>
+                      <Input
+                        id="newAccountName"
+                        value={newAccount.name}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountNumber">Account Number</Label>
+                      <Input
+                        id="newAccountNumber"
+                        value={newAccount.number}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, number: e.target.value }))}
+                        placeholder="e.g., ****4582"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountBalance">Balance</Label>
+                      <Input
+                        id="newAccountBalance"
+                        type="number"
+                        step="0.01"
+                        value={newAccount.balance}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, balance: e.target.value }))}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountInterestRate">Interest Rate</Label>
+                      <Input
+                        id="newAccountInterestRate"
+                        value={newAccount.interestRate}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, interestRate: e.target.value }))}
+                        placeholder="e.g., 2.5%"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountRouting">Routing Number</Label>
+                      <Input
+                        id="newAccountRouting"
+                        value={newAccount.routing}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, routing: e.target.value }))}
+                        placeholder="e.g., 021000021"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountOpenedDate">Opened Date</Label>
+                      <Input
+                        id="newAccountOpenedDate"
+                        type="date"
+                        value={newAccount.openedDate}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, openedDate: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountType">Account Type</Label>
+                      <Select value={newAccount.type} onValueChange={(value) => setNewAccount(prev => ({ ...prev, type: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Checking">Checking</SelectItem>
+                          <SelectItem value="Savings">Savings</SelectItem>
+                          <SelectItem value="Credit">Credit</SelectItem>
+                          <SelectItem value="Investment">Investment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountCurrency">Currency</Label>
+                      <Select value={newAccount.currency} onValueChange={(value) => setNewAccount(prev => ({ ...prev, currency: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD ($)</SelectItem>
+                          <SelectItem value="GHS">GHS (₵)</SelectItem>
+                          <SelectItem value="EUR">EUR (€)</SelectItem>
+                          <SelectItem value="GBP">GBP (£)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newAccountSwiftCode">SWIFT Code</Label>
+                      <Input
+                        id="newAccountSwiftCode"
+                        value={newAccount.swiftCode}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, swiftCode: e.target.value }))}
+                        placeholder="e.g., SBGAKACC"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newAccountNumber">Account Number</Label>
-                    <Input
-                      id="newAccountNumber"
-                      value={newAccount.number}
-                      onChange={(e) => setNewAccount(prev => ({ ...prev, number: e.target.value }))}
-                      placeholder="e.g., ****4582"
-                    />
+                  <Button
+                    onClick={handleAddAccount}
+                    disabled={isLoading}
+                    className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Account
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Accounts List */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle>All Accounts</CardTitle>
+                  <CardDescription>Manage existing accounts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {accounts.length === 0 ? (
+                      <p className="text-center text-slate-500 py-8">No accounts found. Create your first account above.</p>
+                    ) : (
+                      accounts.map((account) => (
+                        <div key={account.id} className="p-4 border border-slate-200 rounded-lg">
+                          {editingAccount === account.id ? (
+                            // Edit Form
+                            <div className="space-y-4">
+                              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-name-${account.id}`}>Account Name</Label>
+                                  <Input
+                                    id={`edit-account-name-${account.id}`}
+                                    value={editAccountForm.name || ''}
+                                    onChange={(e) => setEditAccountForm(prev => ({ ...prev, name: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-number-${account.id}`}>Account Number</Label>
+                                  <Input
+                                    id={`edit-account-number-${account.id}`}
+                                    value={editAccountForm.number || ''}
+                                    onChange={(e) => setEditAccountForm(prev => ({ ...prev, number: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-balance-${account.id}`}>Balance</Label>
+                                  <Input
+                                    id={`edit-account-balance-${account.id}`}
+                                    type="number"
+                                    step="0.01"
+                                    value={editAccountForm.balance || ''}
+                                    onChange={(e) => setEditAccountForm(prev => ({ ...prev, balance: parseFloat(e.target.value) || 0 }))}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-interest-${account.id}`}>Interest Rate</Label>
+                                  <Input
+                                    id={`edit-account-interest-${account.id}`}
+                                    value={editAccountForm.interestRate || ''}
+                                    onChange={(e) => setEditAccountForm(prev => ({ ...prev, interestRate: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-routing-${account.id}`}>Routing Number</Label>
+                                  <Input
+                                    id={`edit-account-routing-${account.id}`}
+                                    value={editAccountForm.routing || ''}
+                                    onChange={(e) => setEditAccountForm(prev => ({ ...prev, routing: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-date-${account.id}`}>Opened Date</Label>
+                                  <Input
+                                    id={`edit-account-date-${account.id}`}
+                                    type="date"
+                                    value={editAccountForm.openedDate || ''}
+                                    onChange={(e) => setEditAccountForm(prev => ({ ...prev, openedDate: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-type-${account.id}`}>Account Type</Label>
+                                  <Select
+                                    value={editAccountForm.type || ''}
+                                    onValueChange={(value) => setEditAccountForm(prev => ({ ...prev, type: value }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Checking">Checking</SelectItem>
+                                      <SelectItem value="Savings">Savings</SelectItem>
+                                      <SelectItem value="Credit">Credit</SelectItem>
+                                      <SelectItem value="Investment">Investment</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-currency-${account.id}`}>Currency</Label>
+                                  <Select
+                                    value={editAccountForm.currency || ''}
+                                    onValueChange={(value) => setEditAccountForm(prev => ({ ...prev, currency: value }))}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select currency" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="USD">USD ($)</SelectItem>
+                                      <SelectItem value="GHS">GHS (₵)</SelectItem>
+                                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                                      <SelectItem value="GBP">GBP (£)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-account-swiftCode-${account.id}`}>SWIFT Code</Label>
+                                  <Input
+                                    id={`edit-account-swiftCode-${account.id}`}
+                                    value={editAccountForm.swiftCode || ''}
+                                    onChange={(e) => setEditAccountForm(prev => ({ ...prev, swiftCode: e.target.value }))}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  onClick={handleSaveEditAccount}
+                                  disabled={isLoading}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Save className="w-4 h-4 mr-2" />
+                                  Save Changes
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={handleCancelEditAccount}
+                                  disabled={isLoading}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            // Display Mode
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                                  <User className="w-6 h-6 text-amber-700" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-slate-900">{account.name}</p>
+                                  <p className="text-sm text-slate-500">Account: {account.number} | SWIFT: {account.swiftCode || "N/A"}</p>
+                                  <p className="text-xs text-slate-400">Opened: {account.openedDate}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <Badge variant="secondary">{account.type} ({account.currency})</Badge>
+                                <div className="text-right">
+                                  <p className="font-semibold text-slate-900">
+                                    {account.currency === 'USD' ? '$' : account.currency === 'GHS' ? '₵' : account.currency === 'EUR' ? '€' : account.currency === 'GBP' ? '£' : ''}
+                                    {account.balance.toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-slate-500">Interest: {account.interestRate}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleStartEditAccount(account)}
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteAccount(account.id)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newAccountBalance">Balance</Label>
-                    <Input
-                      id="newAccountBalance"
-                      type="number"
-                      step="0.01"
-                      value={newAccount.balance}
-                      onChange={(e) => setNewAccount(prev => ({ ...prev, balance: e.target.value }))}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newAccountInterestRate">Interest Rate</Label>
-                    <Input
-                      id="newAccountInterestRate"
-                      value={newAccount.interestRate}
-                      onChange={(e) => setNewAccount(prev => ({ ...prev, interestRate: e.target.value }))}
-                      placeholder="e.g., 2.5%"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newAccountRouting">Routing Number</Label>
-                    <Input
-                      id="newAccountRouting"
-                      value={newAccount.routing}
-                      onChange={(e) => setNewAccount(prev => ({ ...prev, routing: e.target.value }))}
-                      placeholder="e.g., 021000021"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newAccountOpenedDate">Opened Date</Label>
-                    <Input
-                      id="newAccountOpenedDate"
-                      type="date"
-                      value={newAccount.openedDate}
-                      onChange={(e) => setNewAccount(prev => ({ ...prev, openedDate: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="newAccountType">Account Type</Label>
-                    <Select value={newAccount.type} onValueChange={(value) => setNewAccount(prev => ({ ...prev, type: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                </CardContent>
+              </Card>
+            </div>
+          )
+        }
+
+
+        {/* Transactions Tab */}
+        {
+          activeTab === "transactions" && (
+            <div className="space-y-6">
+              {/* User Selector */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Select User
+                  </CardTitle>
+                  <CardDescription>Choose which user's transactions to manage</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    <Select
+                      value={selectedUserId}
+                      onValueChange={(value) => {
+                        setSelectedUserId(value);
+                        loadTransactions(value);
+                      }}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select user" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Checking">Checking</SelectItem>
-                        <SelectItem value="Savings">Savings</SelectItem>
-                        <SelectItem value="Credit">Credit</SelectItem>
-                        <SelectItem value="Investment">Investment</SelectItem>
+                        {users.filter(u => u.role === 'Customer').map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name} ({user.id})
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                      Managing: {users.find(u => u.id === selectedUserId)?.name || selectedUserId}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="statement-from" className="text-xs text-slate-500">From:</Label>
+                        <Input
+                          id="statement-from"
+                          type="date"
+                          className="w-32 h-8 text-xs"
+                          value={statementRange.from}
+                          onChange={(e) => setStatementRange(prev => ({ ...prev, from: e.target.value }))}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="statement-to" className="text-xs text-slate-500">To:</Label>
+                        <Input
+                          id="statement-to"
+                          type="date"
+                          className="w-32 h-8 text-xs"
+                          value={statementRange.to}
+                          onChange={(e) => setStatementRange(prev => ({ ...prev, to: e.target.value }))}
+                        />
+                      </div>
+                      <Button
+                        onClick={handleAdminDownloadStatement}
+                        disabled={isLoading || !selectedUserId}
+                        className="bg-slate-800 hover:bg-slate-900 border border-slate-700 h-8 text-xs"
+                      >
+                        <Download className="w-3 h-3 mr-2" />
+                        Download Statement
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <Button
-                  onClick={handleAddAccount}
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Account
-                </Button>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Accounts List */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle>All Accounts</CardTitle>
-                <CardDescription>Manage existing accounts</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {accounts.length === 0 ? (
-                    <p className="text-center text-slate-500 py-8">No accounts found. Create your first account above.</p>
-                  ) : (
-                    accounts.map((account) => (
-                      <div key={account.id} className="p-4 border border-slate-200 rounded-lg">
-                        {editingAccount === account.id ? (
+              {/* Add New Transaction */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    Add New Transaction for {users.find(u => u.id === selectedUserId)?.name || selectedUserId}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionName">Transaction Name</Label>
+                      <Input
+                        id="transactionName"
+                        value={newTransaction.name}
+                        onChange={(e) => setNewTransaction(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., Coffee Shop"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionAmount">Amount</Label>
+                      <Input
+                        id="transactionAmount"
+                        type="number"
+                        step="0.01"
+                        value={newTransaction.amount}
+                        onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
+                        placeholder="e.g., -5.67"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionCategory">Category</Label>
+                      <Select value={newTransaction.category} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, category: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionMerchant">Merchant</Label>
+                      <Input
+                        id="transactionMerchant"
+                        value={newTransaction.merchant}
+                        onChange={(e) => setNewTransaction(prev => ({ ...prev, merchant: e.target.value }))}
+                        placeholder="e.g., Starbucks #4523"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionDate">Date</Label>
+                      <Input
+                        id="transactionDate"
+                        type="date"
+                        value={newTransaction.date}
+                        onChange={(e) => setNewTransaction(prev => ({ ...prev, date: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionTime">Time</Label>
+                      <Input
+                        id="transactionTime"
+                        type="time"
+                        value={newTransaction.time}
+                        onChange={(e) => setNewTransaction(prev => ({ ...prev, time: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionStatus">Status</Label>
+                      <Select value={newTransaction.status} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, status: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Processed">Processed</SelectItem>
+                          <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Failed">Failed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionType">Type</Label>
+                      <Select value={newTransaction.type} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, type: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="deposit">Deposit</SelectItem>
+                          <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleAddTransaction}
+                    className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Transaction
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Transaction List */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle>Transaction History</CardTitle>
+                  <CardDescription>Manage existing transactions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {transactions.map((transaction) => (
+                      <div key={transaction.id} className="p-4 border border-slate-200 rounded-lg">
+                        {editingTransaction === transaction.id ? (
                           // Edit Form
                           <div className="space-y-4">
                             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div className="space-y-2">
-                                <Label htmlFor={`edit-account-name-${account.id}`}>Account Name</Label>
+                                <Label htmlFor={`edit-name-${transaction.id}`}>Transaction Name</Label>
                                 <Input
-                                  id={`edit-account-name-${account.id}`}
-                                  value={editAccountForm.name || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, name: e.target.value }))}
+                                  id={`edit-name-${transaction.id}`}
+                                  value={editForm.name}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                  placeholder="e.g., Coffee Shop"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor={`edit-account-number-${account.id}`}>Account Number</Label>
+                                <Label htmlFor={`edit-amount-${transaction.id}`}>Amount</Label>
                                 <Input
-                                  id={`edit-account-number-${account.id}`}
-                                  value={editAccountForm.number || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, number: e.target.value }))}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`edit-account-balance-${account.id}`}>Balance</Label>
-                                <Input
-                                  id={`edit-account-balance-${account.id}`}
+                                  id={`edit-amount-${transaction.id}`}
                                   type="number"
                                   step="0.01"
-                                  value={editAccountForm.balance || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, balance: parseFloat(e.target.value) || 0 }))}
+                                  value={editForm.amount}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))}
+                                  placeholder="Enter amount"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor={`edit-account-interest-${account.id}`}>Interest Rate</Label>
+                                <Label htmlFor={`edit-category-${transaction.id}`}>Category</Label>
+                                <Select value={editForm.category} onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select category" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {categories.map((category) => (
+                                      <SelectItem key={category} value={category}>
+                                        {category}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-merchant-${transaction.id}`}>Merchant</Label>
                                 <Input
-                                  id={`edit-account-interest-${account.id}`}
-                                  value={editAccountForm.interestRate || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, interestRate: e.target.value }))}
+                                  id={`edit-merchant-${transaction.id}`}
+                                  value={editForm.merchant}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, merchant: e.target.value }))}
+                                  placeholder="e.g., Starbucks #4523"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor={`edit-account-routing-${account.id}`}>Routing Number</Label>
+                                <Label htmlFor={`edit-date-${transaction.id}`}>Date</Label>
                                 <Input
-                                  id={`edit-account-routing-${account.id}`}
-                                  value={editAccountForm.routing || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, routing: e.target.value }))}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`edit-account-date-${account.id}`}>Opened Date</Label>
-                                <Input
-                                  id={`edit-account-date-${account.id}`}
+                                  id={`edit-date-${transaction.id}`}
                                   type="date"
-                                  value={editAccountForm.openedDate || ''}
-                                  onChange={(e) => setEditAccountForm(prev => ({ ...prev, openedDate: e.target.value }))}
+                                  value={editForm.date}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor={`edit-account-type-${account.id}`}>Account Type</Label>
-                                <Select
-                                  value={editAccountForm.type || ''}
-                                  onValueChange={(value) => setEditAccountForm(prev => ({ ...prev, type: value }))}
-                                >
+                                <Label htmlFor={`edit-time-${transaction.id}`}>Time</Label>
+                                <Input
+                                  id={`edit-time-${transaction.id}`}
+                                  type="time"
+                                  value={editForm.time}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-status-${transaction.id}`}>Status</Label>
+                                <Select value={editForm.status} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Processed">Processed</SelectItem>
+                                    <SelectItem value="Pending">Pending</SelectItem>
+                                    <SelectItem value="Failed">Failed</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-type-${transaction.id}`}>Type</Label>
+                                <Select value={editForm.type} onValueChange={(value) => setEditForm(prev => ({ ...prev, type: value as 'deposit' | 'withdrawal' }))}>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select type" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="Checking">Checking</SelectItem>
-                                    <SelectItem value="Savings">Savings</SelectItem>
-                                    <SelectItem value="Credit">Credit</SelectItem>
-                                    <SelectItem value="Investment">Investment</SelectItem>
+                                    <SelectItem value="deposit">Deposit</SelectItem>
+                                    <SelectItem value="withdrawal">Withdrawal</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
                             </div>
+
                             <div className="flex items-center gap-2">
                               <Button
-                                onClick={handleSaveEditAccount}
+                                onClick={handleSaveEdit}
                                 disabled={isLoading}
                                 className="bg-green-600 hover:bg-green-700"
                               >
@@ -1103,7 +1824,7 @@ export default function ManagementDashboard() {
                               </Button>
                               <Button
                                 variant="outline"
-                                onClick={handleCancelEditAccount}
+                                onClick={handleCancelEdit}
                                 disabled={isLoading}
                               >
                                 Cancel
@@ -1114,26 +1835,34 @@ export default function ManagementDashboard() {
                           // Display Mode
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-                                <User className="w-6 h-6 text-amber-700" />
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
+                                }`}>
+                                {transaction.amount > 0 ? (
+                                  <TrendingUp className="w-5 h-5 text-amber-700" />
+                                ) : (
+                                  <TrendingDown className="w-5 h-5 text-slate-600" />
+                                )}
                               </div>
                               <div>
-                                <p className="font-medium text-slate-900">{account.name}</p>
-                                <p className="text-sm text-slate-500">Account: {account.number}</p>
-                                <p className="text-xs text-slate-400">Opened: {account.openedDate}</p>
+                                <p className="font-medium text-slate-900">{transaction.name}</p>
+                                <p className="text-sm text-slate-500">{transaction.merchant}</p>
+                                <p className="text-xs text-slate-400">{transaction.date} at {transaction.time}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-4">
-                              <Badge variant="secondary">{account.type}</Badge>
-                              <div className="text-right">
-                                <p className="font-semibold text-slate-900">${account.balance.toLocaleString()}</p>
-                                <p className="text-xs text-slate-500">Interest: {account.interestRate}</p>
-                              </div>
+                              <Badge variant="secondary">{transaction.category}</Badge>
+                              <Badge variant={transaction.status === 'Processed' ? 'default' : transaction.status === 'Pending' ? 'secondary' : 'destructive'}>
+                                {transaction.status}
+                              </Badge>
+                              <p className={`font-semibold ${transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
+                                }`}>
+                                {transaction.amount > 0 ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                              </p>
                               <div className="flex items-center gap-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleStartEditAccount(account)}
+                                  onClick={() => handleEditTransaction(transaction)}
                                   className="text-blue-600 hover:text-blue-700"
                                 >
                                   <Edit className="w-4 h-4" />
@@ -1141,7 +1870,7 @@ export default function ManagementDashboard() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleDeleteAccount(account.id)}
+                                  onClick={() => handleDeleteTransaction(transaction.id)}
                                   className="text-red-600 hover:text-red-700"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1151,463 +1880,140 @@ export default function ManagementDashboard() {
                           </div>
                         )}
                       </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-
-        {/* Transactions Tab */}
-        {activeTab === "transactions" && (
-          <div className="space-y-6">
-            {/* User Selector */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Select User
-                </CardTitle>
-                <CardDescription>Choose which user's transactions to manage</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <Select
-                    value={selectedUserId}
-                    onValueChange={(value) => {
-                      setSelectedUserId(value);
-                      loadTransactions(value);
-                    }}
-                  >
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Select user" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.filter(u => u.role === 'Customer').map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({user.id})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                    Managing: {users.find(u => u.id === selectedUserId)?.name || selectedUserId}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Add New Transaction */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="w-5 h-5" />
-                  Add New Transaction for {users.find(u => u.id === selectedUserId)?.name || selectedUserId}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionName">Transaction Name</Label>
-                    <Input
-                      id="transactionName"
-                      value={newTransaction.name}
-                      onChange={(e) => setNewTransaction(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Coffee Shop"
-                    />
+                    ))}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionAmount">Amount</Label>
-                    <Input
-                      id="transactionAmount"
-                      type="number"
-                      step="0.01"
-                      value={newTransaction.amount}
-                      onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="e.g., -5.67"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionCategory">Category</Label>
-                    <Select value={newTransaction.category} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, category: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionMerchant">Merchant</Label>
-                    <Input
-                      id="transactionMerchant"
-                      value={newTransaction.merchant}
-                      onChange={(e) => setNewTransaction(prev => ({ ...prev, merchant: e.target.value }))}
-                      placeholder="e.g., Starbucks #4523"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionDate">Date</Label>
-                    <Input
-                      id="transactionDate"
-                      type="date"
-                      value={newTransaction.date}
-                      onChange={(e) => setNewTransaction(prev => ({ ...prev, date: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionTime">Time</Label>
-                    <Input
-                      id="transactionTime"
-                      type="time"
-                      value={newTransaction.time}
-                      onChange={(e) => setNewTransaction(prev => ({ ...prev, time: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionStatus">Status</Label>
-                    <Select value={newTransaction.status} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, status: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Processed">Processed</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Failed">Failed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="transactionType">Type</Label>
-                    <Select value={newTransaction.type} onValueChange={(value) => setNewTransaction(prev => ({ ...prev, type: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="deposit">Deposit</SelectItem>
-                        <SelectItem value="withdrawal">Withdrawal</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button
-                  onClick={handleAddTransaction}
-                  className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Transaction
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Transaction List */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle>Transaction History</CardTitle>
-                <CardDescription>Manage existing transactions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {transactions.map((transaction) => (
-                    <div key={transaction.id} className="p-4 border border-slate-200 rounded-lg">
-                      {editingTransaction === transaction.id ? (
-                        // Edit Form
-                        <div className="space-y-4">
-                          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor={`edit-name-${transaction.id}`}>Transaction Name</Label>
-                              <Input
-                                id={`edit-name-${transaction.id}`}
-                                value={editForm.name}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                                placeholder="e.g., Coffee Shop"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`edit-amount-${transaction.id}`}>Amount</Label>
-                              <Input
-                                id={`edit-amount-${transaction.id}`}
-                                type="number"
-                                step="0.01"
-                                value={editForm.amount}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))}
-                                placeholder="Enter amount"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`edit-category-${transaction.id}`}>Category</Label>
-                              <Select value={editForm.category} onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {categories.map((category) => (
-                                    <SelectItem key={category} value={category}>
-                                      {category}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`edit-merchant-${transaction.id}`}>Merchant</Label>
-                              <Input
-                                id={`edit-merchant-${transaction.id}`}
-                                value={editForm.merchant}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, merchant: e.target.value }))}
-                                placeholder="e.g., Starbucks #4523"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`edit-date-${transaction.id}`}>Date</Label>
-                              <Input
-                                id={`edit-date-${transaction.id}`}
-                                type="date"
-                                value={editForm.date}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`edit-time-${transaction.id}`}>Time</Label>
-                              <Input
-                                id={`edit-time-${transaction.id}`}
-                                type="time"
-                                value={editForm.time}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`edit-status-${transaction.id}`}>Status</Label>
-                              <Select value={editForm.status} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Processed">Processed</SelectItem>
-                                  <SelectItem value="Pending">Pending</SelectItem>
-                                  <SelectItem value="Failed">Failed</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`edit-type-${transaction.id}`}>Type</Label>
-                              <Select value={editForm.type} onValueChange={(value) => setEditForm(prev => ({ ...prev, type: value as 'deposit' | 'withdrawal' }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="deposit">Deposit</SelectItem>
-                                  <SelectItem value="withdrawal">Withdrawal</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Button
-                              onClick={handleSaveEdit}
-                              disabled={isLoading}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <Save className="w-4 h-4 mr-2" />
-                              Save Changes
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={handleCancelEdit}
-                              disabled={isLoading}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        // Display Mode
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.amount > 0 ? "bg-amber-100" : "bg-slate-100"
-                              }`}>
-                              {transaction.amount > 0 ? (
-                                <TrendingUp className="w-5 h-5 text-amber-700" />
-                              ) : (
-                                <TrendingDown className="w-5 h-5 text-slate-600" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-900">{transaction.name}</p>
-                              <p className="text-sm text-slate-500">{transaction.merchant}</p>
-                              <p className="text-xs text-slate-400">{transaction.date} at {transaction.time}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Badge variant="secondary">{transaction.category}</Badge>
-                            <Badge variant={transaction.status === 'Processed' ? 'default' : transaction.status === 'Pending' ? 'secondary' : 'destructive'}>
-                              {transaction.status}
-                            </Badge>
-                            <p className={`font-semibold ${transaction.amount > 0 ? "text-amber-700" : "text-slate-900"
-                              }`}>
-                              {transaction.amount > 0 ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditTransaction(transaction)}
-                                className="text-blue-600 hover:text-blue-700"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteTransaction(transaction.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                </CardContent>
+              </Card>
+            </div>
+          )
+        }
 
         {/* Backup Tab */}
-        {activeTab === "backup" && (
-          <div className="space-y-6">
-            {/* Message Display */}
-            {message && (
-              <div className={`p-4 rounded-lg ${message.includes('successfully') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                {message}
-              </div>
-            )}
-
-            {/* Create Backup */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Download className="w-5 h-5" />
-                  Create Backup
-                </CardTitle>
-                <CardDescription>Create a backup of all current transactions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-slate-600">
-                    Create a timestamped backup of all transactions. This will save the current state of your transaction data.
-                  </p>
-                  <Button
-                    onClick={handleCreateBackup}
-                    disabled={isLoading}
-                    className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
-                  >
-                    {isLoading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Creating Backup...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4 mr-2" />
-                        Create Backup
-                      </>
-                    )}
-                  </Button>
+        {
+          activeTab === "backup" && (
+            <div className="space-y-6">
+              {/* Message Display */}
+              {message && (
+                <div className={`p-4 rounded-lg ${message.includes('successfully') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  {message}
                 </div>
-              </CardContent>
-            </Card>
+              )}
 
-            {/* Restore Backup */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
-                  Restore Backup
-                </CardTitle>
-                <CardDescription>Restore transactions from a previous backup</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-slate-600">
-                    Select a backup file to restore. This will replace all current transactions with the backup data.
-                  </p>
+              {/* Create Backup */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="w-5 h-5" />
+                    Create Backup
+                  </CardTitle>
+                  <CardDescription>Create a backup of all current transactions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-slate-600">
+                      Create a timestamped backup of all transactions. This will save the current state of your transaction data.
+                    </p>
+                    <Button
+                      onClick={handleCreateBackup}
+                      disabled={isLoading}
+                      className="bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
+                    >
+                      {isLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Creating Backup...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 mr-2" />
+                          Create Backup
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  {backups.length > 0 ? (
-                    <div className="space-y-2">
-                      <Label>Available Backups:</Label>
+              {/* Restore Backup */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="w-5 h-5" />
+                    Restore Backup
+                  </CardTitle>
+                  <CardDescription>Restore transactions from a previous backup</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-slate-600">
+                      Select a backup file to restore. This will replace all current transactions with the backup data.
+                    </p>
+
+                    {backups.length > 0 ? (
                       <div className="space-y-2">
-                        {backups.map((backup, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                            <div>
-                              <p className="font-medium">{backup.filename}</p>
-                              <p className="text-sm text-slate-500">
-                                Created: {new Date(backup.created).toLocaleString()}
-                              </p>
+                        <Label>Available Backups:</Label>
+                        <div className="space-y-2">
+                          {backups.map((backup, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                              <div>
+                                <p className="font-medium">{backup.filename}</p>
+                                <p className="text-sm text-slate-500">
+                                  Created: {new Date(backup.created).toLocaleString()}
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleRestoreBackup(backup.filename)}
+                                disabled={isLoading}
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                Restore
+                              </Button>
                             </div>
-                            <Button
-                              variant="outline"
-                              onClick={() => handleRestoreBackup(backup.filename)}
-                              disabled={isLoading}
-                              className="text-red-600 border-red-200 hover:bg-red-50"
-                            >
-                              <Upload className="w-4 h-4 mr-2" />
-                              Restore
-                            </Button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <p className="text-slate-500 italic">No backup files found.</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    ) : (
+                      <p className="text-slate-500 italic">No backup files found.</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* System Information */}
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
-                  System Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Total Transactions</Label>
-                    <p className="text-2xl font-bold text-slate-900">{transactions.length}</p>
+              {/* System Information */}
+              <Card className="bg-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    System Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Total Transactions</Label>
+                      <p className="text-2xl font-bold text-slate-900">{transactions.length}</p>
+                    </div>
+                    <div>
+                      <Label>Total Income</Label>
+                      <p className="text-2xl font-bold text-green-600">${totalIncome.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <Label>Total Expenses</Label>
+                      <p className="text-2xl font-bold text-red-600">${totalExpenses.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <Label>Net Balance</Label>
+                      <p className="text-2xl font-bold text-slate-900">${(totalIncome - totalExpenses).toLocaleString()}</p>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Total Income</Label>
-                    <p className="text-2xl font-bold text-green-600">${totalIncome.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <Label>Total Expenses</Label>
-                    <p className="text-2xl font-bold text-red-600">${totalExpenses.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <Label>Net Balance</Label>
-                    <p className="text-2xl font-bold text-slate-900">${(totalIncome - totalExpenses).toLocaleString()}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </main>
-    </div>
+                </CardContent>
+              </Card>
+            </div>
+          )
+        }
+      </main >
+    </div >
   );
 }

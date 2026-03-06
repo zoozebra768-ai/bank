@@ -12,6 +12,8 @@ export interface Account {
   routing: string;
   openedDate: string;
   type: string;
+  currency: string;
+  swiftCode?: string;
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -28,7 +30,7 @@ function ensureDataDirectory() {
 function readAccounts(): Account[] {
   try {
     ensureDataDirectory();
-    
+
     if (!fs.existsSync(ACCOUNTS_FILE)) {
       // Create initial file with sample data
       const initialAccounts: Account[] = [
@@ -40,14 +42,15 @@ function readAccounts(): Account[] {
           interestRate: "2.5%",
           routing: "021000021",
           openedDate: "2023-01-15",
-          type: "Checking"
+          type: "Checking",
+          currency: "USD"
         }
       ];
-      
+
       fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify(initialAccounts, null, 2));
       return initialAccounts;
     }
-    
+
     const data = fs.readFileSync(ACCOUNTS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
@@ -82,22 +85,22 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Validate required fields
-    const { name, number, balance, interestRate, routing, openedDate, type } = body;
-    
-    if (!name || !number || balance === undefined || !interestRate || !routing || !openedDate || !type) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Missing required fields: name, number, balance, interestRate, routing, openedDate, type' 
+    const { name, number, balance, interestRate, routing, openedDate, type, currency, swiftCode } = body;
+
+    if (!name || !number || balance === undefined || !interestRate || !routing || !openedDate || !type || !currency) {
+      return NextResponse.json({
+        success: false,
+        error: 'Missing required fields: name, number, balance, interestRate, routing, openedDate, type, currency'
       }, { status: 400 });
     }
-    
+
     const accounts = readAccounts();
-    
+
     // Generate new ID
     const newId = accounts.length > 0 ? Math.max(...accounts.map(a => a.id)) + 1 : 1;
-    
+
     const newAccount: Account = {
       id: newId,
       name,
@@ -106,11 +109,13 @@ export async function POST(request: NextRequest) {
       interestRate,
       routing,
       openedDate,
-      type
+      type,
+      currency,
+      swiftCode: swiftCode || "SBGAKACC"
     };
-    
+
     accounts.push(newAccount);
-    
+
     if (writeAccounts(accounts)) {
       return NextResponse.json({ success: true, data: newAccount });
     } else {
@@ -126,25 +131,25 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, ...updates } = body;
-    
+
     if (!id) {
       return NextResponse.json({ success: false, error: 'Account ID is required' }, { status: 400 });
     }
-    
+
     const accounts = readAccounts();
     const index = accounts.findIndex(a => a.id === id);
-    
+
     if (index === -1) {
       return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 });
     }
-    
+
     // Convert balance to number if provided
     if (updates.balance !== undefined) {
       updates.balance = parseFloat(updates.balance);
     }
-    
+
     accounts[index] = { ...accounts[index], ...updates };
-    
+
     if (writeAccounts(accounts)) {
       return NextResponse.json({ success: true, data: accounts[index] });
     } else {
@@ -160,18 +165,18 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
       return NextResponse.json({ success: false, error: 'Account ID is required' }, { status: 400 });
     }
-    
+
     const accounts = readAccounts();
     const filteredAccounts = accounts.filter(a => a.id !== parseInt(id));
-    
+
     if (filteredAccounts.length === accounts.length) {
       return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 });
     }
-    
+
     if (writeAccounts(filteredAccounts)) {
       return NextResponse.json({ success: true, message: 'Account deleted successfully' });
     } else {

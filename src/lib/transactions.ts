@@ -11,6 +11,29 @@ export interface Transaction {
   type: "deposit" | "withdrawal";
 }
 
+export interface Account {
+  id: number;
+  userId: string;
+  name: string;
+  number: string;
+  balance: number;
+  interestRate: string;
+  routing: string;
+  openedDate: string;
+  type: string;
+  currency: string;
+  swiftCode?: string;
+}
+
+export const CURRENCY_MAP: Record<string, string> = {
+  'USD': '$',
+  'EUR': '€',
+  'GBP': '£',
+  'GHS': 'GH₵'
+};
+
+export const getCurrencySymbol = (code: string = 'USD') => CURRENCY_MAP[code] || '$';
+
 // Get current user ID from localStorage
 const getCurrentUserId = (): string | undefined => {
   if (typeof window === 'undefined') return undefined;
@@ -50,6 +73,22 @@ export const getTransactions = async (userId?: string): Promise<Transaction[]> =
   }
 };
 
+// Get account info for current user
+export const getAccountData = async (userId?: string): Promise<Account | null> => {
+  try {
+    const effectiveUserId = userId || getCurrentUserId();
+    if (!effectiveUserId) return null;
+
+    const baseUrl = getBaseUrl();
+    const response = await fetch(`${baseUrl}/api/accounts?userId=${effectiveUserId}`);
+    const result = await response.json();
+    return result.success ? result.data : null;
+  } catch (error) {
+    console.error('Error fetching account:', error);
+    return null;
+  }
+};
+
 // Helper functions for transaction data
 export const getTransactionsByType = async (type: "deposit" | "withdrawal" | "all") => {
   const transactions = await getTransactions();
@@ -57,20 +96,20 @@ export const getTransactionsByType = async (type: "deposit" | "withdrawal" | "al
   return transactions.filter(t => t.type === type);
 };
 
-export const getTotalIncome = async () => {
-  const transactions = await getTransactions();
-  return transactions.filter(t => t.type === "deposit" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0);
+export const getTotalIncome = async (userId?: string) => {
+  const transactions = await getTransactions(userId);
+  return transactions.filter(t => t.type === "deposit" && t.status === "Processed").reduce((sum, t) => Number(sum) + Number(t.amount || 0), 0);
 };
 
-export const getTotalExpenses = async () => {
-  const transactions = await getTransactions();
-  return Math.abs(transactions.filter(t => t.type === "withdrawal" && t.status === "Processed").reduce((sum, t) => sum + t.amount, 0));
+export const getTotalExpenses = async (userId?: string) => {
+  const transactions = await getTransactions(userId);
+  return Math.abs(transactions.filter(t => t.type === "withdrawal" && t.status === "Processed").reduce((sum, t) => Number(sum) + Number(t.amount || 0), 0));
 };
 
-export const getNetBalance = async () => {
-  const income = await getTotalIncome();
-  const expenses = await getTotalExpenses();
-  return income - expenses;
+export const getNetBalance = async (userId?: string) => {
+  const income = await getTotalIncome(userId);
+  const expenses = await getTotalExpenses(userId);
+  return Number(income) - Number(expenses);
 };
 
 export const getAvailableBalance = async () => {
@@ -79,13 +118,13 @@ export const getAvailableBalance = async () => {
 
   const totalDeposits = processedTransactions
     .filter(t => t.type === "deposit")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => Number(sum) + Number(t.amount || 0), 0);
 
   const totalWithdrawals = processedTransactions
     .filter(t => t.type === "withdrawal")
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    .reduce((sum, t) => Number(sum) + Math.abs(Number(t.amount || 0)), 0);
 
-  return totalDeposits - totalWithdrawals;
+  return Number(totalDeposits) - Number(totalWithdrawals);
 };
 
 export const getCompletedTransactions = async () => {
@@ -98,30 +137,86 @@ export const getPendingTransactions = async () => {
   return transactions.filter(t => t.status === "Pending");
 };
 
-export const getStatementData = async () => {
-  const transactions = await getTransactions();
-  const totalIncome = await getTotalIncome();
-  const totalExpenses = await getTotalExpenses();
-  const netBalance = await getNetBalance();
+export const getStatementData = async (userId?: string, currency: string = 'USD', startDate?: string, endDate?: string) => {
+  const account = await getAccountData(userId);
+  const effectiveCurrency = account?.currency || currency;
+  const currencySymbol = getCurrencySymbol(effectiveCurrency);
+
+  const allTransactions = await getTransactions(userId);
+
+  // Sort all transactions chronologically for correct historical balance calculation
+  const chronologicalTransactions = [...allTransactions].sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  // Determine filtering bounds
+  const start = startDate ? new Date(startDate) : new Date(0);
+  const end = endDate ? new Date(endDate) : new Date();
+  // Set end date to end of day to include all transactions on that day
+  end.setHours(23, 59, 59, 999);
+
+  // Determine "Opening Balance" type transactions
+  const isOpeningRecord = (t: any) =>
+    t.name === "Opening Balance" || t.name === "Initial Deposit" || t.name === "Cash Deposit";
+
+  // Opening Balance calculation:
+  // We sum ALL transactions that are either "Opening Balance" records OR occurred before the start date.
+  // This ensures that the primary "Opening Balance" is always in the header, not the table.
+  const openingTransactions = chronologicalTransactions.filter(t =>
+    t.status === "Processed" && (isOpeningRecord(t) || new Date(t.date) < start)
+  );
+  const openingBalance = openingTransactions.reduce((sum, t) => Number(sum) + Number(t.amount || 0), 0);
+
+  // Transactions within the selected period
+  // We exclude "Opening Balance" records from the table because they are now accounted for in the header.
+  const filteredTransactions = chronologicalTransactions.filter(t => {
+    const tDate = new Date(t.date);
+    const inRange = tDate >= start && tDate <= end;
+    return inRange && !isOpeningRecord(t);
+  });
+
+  const totalIncome = filteredTransactions
+    .filter(t => t.type === "deposit" && t.status === "Processed")
+    .reduce((sum, t) => Number(sum) + Number(t.amount || 0), 0);
+
+  const totalExpenses = Math.abs(filteredTransactions
+    .filter(t => t.type === "withdrawal" && t.status === "Processed")
+    .reduce((sum, t) => Number(sum) + Number(t.amount || 0), 0));
+
+  const closingBalance = Number(openingBalance) + Number(totalIncome) - Number(totalExpenses);
+
+  // In a real app, we'd fetch the user's name and account info from the database
+  const isDefaultUser = !userId || userId === 'linaglenn';
+
+  const formatDateRange = (s?: string, e?: string) => {
+    if (s && e) return `${new Date(s).toLocaleDateString()} - ${new Date(e).toLocaleDateString()}`;
+    if (s) return `From ${new Date(s).toLocaleDateString()}`;
+    if (e) return `Until ${new Date(e).toLocaleDateString()}`;
+    return "Full History";
+  };
 
   return {
-    accountHolder: "Lisaglenn",
-    accountNumber: "****4582",
-    statementPeriod: "October 1 - October 19, 2025",
+    accountHolder: account?.name || (isDefaultUser ? "Lisaglenn" : (userId || "Customer")),
+    accountNumber: account?.number || (isDefaultUser ? "****4582" : "****0000"),
+    statementPeriod: formatDateRange(startDate, endDate),
     statementDate: new Date().toLocaleDateString(),
-    openingBalance: 3500.00,
+    openingBalance,
     totalIncome,
     totalExpenses,
-    closingBalance: netBalance,
-    transactions: transactions.map(t => ({
+    closingBalance,
+    transactions: filteredTransactions.map(t => ({
       date: t.date,
       time: t.time,
       description: t.name,
       merchant: t.merchant,
       category: t.category,
       amount: t.amount,
-      status: t.status
-    }))
+      status: t.status,
+      type: t.type
+    })),
+    currency: effectiveCurrency,
+    currencySymbol,
+    swiftCode: account?.swiftCode || "SBGAKACC"
   };
 };
 

@@ -154,7 +154,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Transaction not found' }, { status: 404 });
     }
 
-    transactions[index] = { ...transactions[index], ...updates };
+    const updatedTransaction = { ...transactions[index], ...updates };
+
+    // Ensure amount is a number if it was updated
+    if (updates.amount !== undefined) {
+      updatedTransaction.amount = parseFloat(String(updates.amount));
+    }
+
+    transactions[index] = updatedTransaction;
 
     if (writeTransactions(transactions, userId)) {
       return NextResponse.json({ success: true, data: transactions[index] });
