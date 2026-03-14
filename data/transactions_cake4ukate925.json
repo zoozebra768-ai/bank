@@ -1,16 +1,5 @@
 [
   {
-    "id": 1,
-    "name": "Cash Deposit",
-    "amount": 500,
-    "date": "2025-12-24",
-    "time": "11:22",
-    "category": "Cash",
-    "status": "Processed",
-    "merchant": "Kate Osei #5488",
-    "type": "deposit"
-  },
-  {
     "id": 2,
     "name": "Cheque Deposit ",
     "amount": 2338299.99,
