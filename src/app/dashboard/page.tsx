@@ -32,7 +32,8 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { getTransactions, getTotalIncome, getTotalExpenses, getNetBalance, getStatementData, getAccountData, getCurrencySymbol, type Transaction, type Account } from "@/lib/transactions";
-import { generateBankStatementPDF } from "@/lib/pdfStatement";
+import { pdf } from '@react-pdf/renderer';
+import BankStatementPDF from "@/components/BankStatementPDF";
 import { getUserData, getUserDisplayName, getUserInitials, getUserAccountData, clearUserData, getUserRole } from "@/lib/user";
 import RoryBankLogo from "@/components/RoryBankLogo";
 
@@ -79,7 +80,13 @@ export default function AccountDetailsPage() {
   const generateStatement = async () => {
     try {
       const statementData = await getStatementData();
-      await generateBankStatementPDF(statementData);
+      const blob = await pdf(<BankStatementPDF data={statementData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `RoryBank_Statement_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error generating statement:', error);
     }

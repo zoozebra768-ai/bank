@@ -32,8 +32,10 @@ import {
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { getTransactions, getTotalIncome, getTotalExpenses, type Transaction } from "@/lib/transactions";
+import { getTransactions, getTotalIncome, getTotalExpenses, getStatementData, type Transaction } from "@/lib/transactions";
 import { getUserData, getUserAccountData } from "@/lib/user";
+import { pdf } from '@react-pdf/renderer';
+import BankStatementPDF from "@/components/BankStatementPDF";
 
 export default function AccountDetailsPage() {
   const params = useParams();
@@ -68,51 +70,19 @@ export default function AccountDetailsPage() {
   };
 
   // Statement generation function
-  const generateStatement = () => {
-    const netBalance = totalIncome - totalExpenses;
-
-    // Create statement content
-    const statementContent = `
-RORY BANK
-ACCOUNT STATEMENT
-
-Account Holder: ${getUserData().name || "Customer"}
-Account Number: ${account.fullNumber || "****0000"}
-Statement Period: Full History
-Statement Date: ${new Date().toLocaleDateString()}
-
-SUMMARY:
-Opening Balance: ₵0.00
-Total Income: ₵${totalIncome.toFixed(2)}
-Total Expenses: ₵${totalExpenses.toFixed(2)}
-Closing Balance: ₵${netBalance.toFixed(2)}
-
-TRANSACTION DETAILS:
-${filteredTransactions.map(t => `
-Date: ${t.date} ${t.time}
-Description: ${t.name}
-Merchant: ${t.merchant}
-Category: ${t.category}
-Amount: ${t.amount > 0 ? '+' : ''}₵${t.amount.toFixed(2)}
-Status: ${t.status}
-`).join('')}
-
-This statement was generated on ${new Date().toLocaleString()}
-For any questions, please contact customer service.
-
-Rory Bank - Modern Banking
-    `.trim();
-
-    // Create and download file
-    const blob = new Blob([statementContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `RoryBank_Statement_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+  const generateStatement = async () => {
+    try {
+      const statementData = await getStatementData();
+      const blob = await pdf(<BankStatementPDF data={statementData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `RoryBank_Statement_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating statement:', error);
+    }
   };
 
   const accountData = getUserAccountData();

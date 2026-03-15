@@ -16,20 +16,7 @@ import {
 import {
   ArrowLeft,
   Save,
-  Plus,
-  Trash2,
-  Edit,
-  Eye,
-  Settings,
-  User,
-  CreditCard,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  DollarSign,
-  Download,
-  Upload,
-  RefreshCw
+  Plus, Trash2, Edit, RefreshCw, Download, Upload, Shield, User, DollarSign, WalletCards, Activity, CalendarIcon, Eye, CreditCard, TrendingUp, TrendingDown, Calendar, Settings
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -740,30 +727,79 @@ export default function ManagementDashboard() {
   };
 
   const handleAdminDownloadStatement = async () => {
-    if (!selectedUserId) {
-      setMessage("Please select a user first");
-      return;
-    }
-
+    if (!selectedUserId) return;
     setIsLoading(true);
-    try {
-      // Find the account currency for the selected user
-      const userAccount = accounts.find(a => a.name.toLowerCase() === selectedUserId.toLowerCase());
-      const currency = userAccount?.currency || 'USD';
 
-      const statementData = await getStatementData(selectedUserId, currency, statementRange.from, statementRange.to);
-      const blob = await pdf(<BankStatementPDF data={statementData} />).toBlob();
+    try {
+      // Create user-specific data for the statement
+      const user = users.find(u => u.id === selectedUserId);
+
+      // Determine filtering bounds
+      const start = statementRange.from ? new Date(statementRange.from) : new Date(0);
+      const end = statementRange.to ? new Date(statementRange.to) : new Date();
+      end.setHours(23, 59, 59, 999);
+
+      // Sort chronologically for balance calculations
+      const chronological = [...transactions].sort((a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      const isOpeningRecord = (t: any) =>
+        t.name === "Opening Balance" || t.name === "Initial Deposit" || t.name === "Cash Deposit";
+
+      const openingTx = chronological.filter(t =>
+        t.status === "Processed" && (isOpeningRecord(t) || new Date(t.date) < start)
+      );
+      const openingBalance = openingTx.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+      const filteredTx = chronological.filter(t => {
+        const tDate = new Date(t.date);
+        return tDate >= start && tDate <= end && !isOpeningRecord(t);
+      });
+
+      const totalIncome = filteredTx
+        .filter(t => t.type === "deposit" && t.status === "Processed")
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+      const totalExpenses = Math.abs(filteredTx
+        .filter(t => t.type === "withdrawal" && t.status === "Processed")
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0));
+
+      const closingBalance = openingBalance + totalIncome - totalExpenses;
+
+      const statementData = {
+        accountHolder: user?.name || selectedUserId,
+        accountNumber: "Admin Snapshot", // Can be dynamic if we pull acc info
+        statementPeriod: `${statementRange.from || 'Start'} to ${statementRange.to || 'End'}`,
+        statementDate: new Date().toLocaleDateString(),
+        openingBalance,
+        totalIncome,
+        totalExpenses,
+        closingBalance,
+        transactions: filteredTx.map(t => ({
+          date: t.date,
+          time: t.time,
+          description: t.name,
+          merchant: t.merchant,
+          category: t.category,
+          amount: t.amount,
+          status: t.status,
+          type: t.type
+        })),
+        currency: 'USD',
+        currencySymbol: '$'
+      };
+
+      const blob = await pdf(<BankStatementPDF data={statementData as any} />).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const userName = users.find(u => u.id === selectedUserId)?.name || selectedUserId;
-      link.download = `Statement_${userName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = `${selectedUserId}_statement_${new Date().toISOString().split('T')[0]}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-      setMessage("Statement generated successfully");
     } catch (error) {
       console.error('Error generating statement:', error);
-      setMessage("Error generating statement");
+      alert('Failed to generate statement. See console for details.');
     } finally {
       setIsLoading(false);
     }
