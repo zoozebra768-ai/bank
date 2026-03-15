@@ -138,11 +138,32 @@ export const getPendingTransactions = async () => {
 };
 
 export const getStatementData = async (userId?: string, currency: string = 'USD', startDate?: string, endDate?: string) => {
-  const account = await getAccountData(userId);
-  const effectiveCurrency = account?.currency || currency;
+  const effectiveUserId = userId || getCurrentUserId();
+  const account = await getAccountData(effectiveUserId);
+
+  // Try to get user data for fallback
+  let fallbackName = "Customer";
+  let fallbackNumber = "****0000";
+  let fallbackSwift = "SBGAKACC";
+  let userCurrency = currency;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const userDataStr = localStorage.getItem('user');
+      if (userDataStr) {
+        const userObj = JSON.parse(userDataStr);
+        fallbackName = userObj.name || fallbackName;
+        fallbackNumber = userObj.accountNumber || (userObj.id === 'linaglenn' ? "****4582" : "****0000");
+        fallbackSwift = userObj.swiftCode || fallbackSwift;
+        userCurrency = userObj.currency || currency;
+      }
+    } catch (e) { }
+  }
+
+  const effectiveCurrency = account?.currency || userCurrency;
   const currencySymbol = getCurrencySymbol(effectiveCurrency);
 
-  const allTransactions = await getTransactions(userId);
+  const allTransactions = await getTransactions(effectiveUserId);
 
   // Sort all transactions chronologically for correct historical balance calculation
   const chronologicalTransactions = [...allTransactions].sort((a, b) =>
@@ -185,9 +206,6 @@ export const getStatementData = async (userId?: string, currency: string = 'USD'
 
   const closingBalance = Number(openingBalance) + Number(totalIncome) - Number(totalExpenses);
 
-  // In a real app, we'd fetch the user's name and account info from the database
-  const isDefaultUser = !userId || userId === 'linaglenn';
-
   const formatDateRange = (s?: string, e?: string) => {
     if (s && e) return `${new Date(s).toLocaleDateString()} - ${new Date(e).toLocaleDateString()}`;
     if (s) return `From ${new Date(s).toLocaleDateString()}`;
@@ -196,8 +214,8 @@ export const getStatementData = async (userId?: string, currency: string = 'USD'
   };
 
   return {
-    accountHolder: account?.name || (isDefaultUser ? "Lisaglenn" : (userId || "Customer")),
-    accountNumber: account?.number || (isDefaultUser ? "****4582" : "****0000"),
+    accountHolder: account?.name || fallbackName,
+    accountNumber: account?.number || fallbackNumber,
     statementPeriod: formatDateRange(startDate, endDate),
     statementDate: new Date().toLocaleDateString(),
     openingBalance,
@@ -216,7 +234,7 @@ export const getStatementData = async (userId?: string, currency: string = 'USD'
     })),
     currency: effectiveCurrency,
     currencySymbol,
-    swiftCode: account?.swiftCode || "SBGAKACC"
+    swiftCode: account?.swiftCode || fallbackSwift
   };
 };
 
