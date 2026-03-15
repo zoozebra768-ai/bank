@@ -76,9 +76,9 @@ export default function AccountDetailsPage() {
 RORY BANK
 ACCOUNT STATEMENT
 
-Account Holder: Lisaglenn
-Account Number: ****4582
-Statement Period: October 1 - October 19, 2025
+Account Holder: ${getUserData().name || "Customer"}
+Account Number: ${account.fullNumber || "****0000"}
+Statement Period: Full History
 Statement Date: ${new Date().toLocaleDateString()}
 
 SUMMARY:
@@ -88,7 +88,7 @@ Total Expenses: ₵${totalExpenses.toFixed(2)}
 Closing Balance: ₵${netBalance.toFixed(2)}
 
 TRANSACTION DETAILS:
-${transactions.map(t => `
+${filteredTransactions.map(t => `
 Date: ${t.date} ${t.time}
 Description: ${t.name}
 Merchant: ${t.merchant}
@@ -115,23 +115,9 @@ Rory Bank - Modern Banking
     window.URL.revokeObjectURL(url);
   };
 
-  const accountData = {
-    "1": {
-      name: "Current Account",
-      number: "****4582",
-      fullNumber: "5678 9012 2341",
-      balance: 12345.67,
-      availableBalance: 3500,
-      type: "checking",
-      openedDate: "Jan 15, 2020",
-      interestRate: "0.01%",
-      routing: "021000021",
-      creditLimit: 0,
-      dueDate: undefined
-    }
-  };
+  const accountData = getUserAccountData();
 
-  const account = accountData[params.id as keyof typeof accountData] || accountData["1"];
+  const account = accountData[params.id as keyof typeof accountData] || accountData["1"] || { fullNumber: "****0000" };
 
   const allTransactions = transactions;
 
@@ -356,9 +342,9 @@ Rory Bank - Modern Banking
                 <TrendingUp className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">₵{account.creditLimit > 0 ? account.creditLimit.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}</div>
+                <div className="text-2xl font-bold">₵{((account as any).creditLimit ?? 0) > 0 ? ((account as any).creditLimit).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}</div>
                 <p className="text-xs text-slate-600">
-                  {account.creditLimit > 0 ? 'Available credit' : 'No credit limit'}
+                  {((account as any).creditLimit ?? 0) > 0 ? 'Available credit' : 'No credit limit'}
                 </p>
               </CardContent>
             </Card>
@@ -369,7 +355,7 @@ Rory Bank - Modern Banking
                 <TrendingUp className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{account.interestRate}</div>
+                <div className="text-2xl font-bold">{(account as any).interestRate || '0.00%'}</div>
                 <p className="text-xs text-slate-600">
                   Annual percentage rate
                 </p>
@@ -534,7 +520,7 @@ Rory Bank - Modern Banking
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Routing Number</p>
-                  <p className="font-medium text-slate-900">{account.routing}</p>
+                  <p className="font-medium text-slate-900">{(account as any).routing || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Account Type</p>
@@ -546,7 +532,7 @@ Rory Bank - Modern Banking
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Interest Rate</p>
-                  <p className="font-medium text-slate-900">{account.interestRate}</p>
+                  <p className="font-medium text-slate-900">{(account as any).interestRate || 'N/A'}</p>
                 </div>
               </CardContent>
             </Card>

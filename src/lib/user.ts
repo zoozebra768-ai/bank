@@ -137,6 +137,8 @@ export const getUserAccountData = () => {
     availableBalance: number;
     type: string;
     openedDate: string;
+    interestRate?: string;
+    routing?: string;
     creditLimit?: number;
     dueDate?: string;
   }>> = {
@@ -149,6 +151,8 @@ export const getUserAccountData = () => {
         availableBalance: 3475.25,
         type: "Current",
         openedDate: "Oct 15, 2025",
+        interestRate: "0.01%",
+        routing: "021000021",
         creditLimit: undefined,
         dueDate: undefined
       }
@@ -162,6 +166,8 @@ export const getUserAccountData = () => {
         availableBalance: 0,
         type: "Current",
         openedDate: "Sep 26, 2025",
+        interestRate: "0.01%",
+        routing: "021000021",
         creditLimit: undefined,
         dueDate: undefined
       }
