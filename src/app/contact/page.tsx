@@ -162,7 +162,7 @@ export default function ContactPage() {
     },
     {
       icon: MapPin,
-      title: "UK Office",
+      title: "Scotland Office",
       details: ["42 Hopetoun St, Bathgate EH48 4EU, Scotland"],
       description: "Monday - Friday, 8AM - 5PM"
     },
