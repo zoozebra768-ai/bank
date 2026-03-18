@@ -156,8 +156,14 @@ export default function ContactPage() {
     },
     {
       icon: MapPin,
-      title: "Visit Us",
+      title: "Ghana Office",
       details: ["123 Independence Avenue", "Accra, Ghana"],
+      description: "Monday - Friday, 8AM - 5PM"
+    },
+    {
+      icon: MapPin,
+      title: "UK Office",
+      details: ["42 Hopetoun St, Bathgate EH48 4EU, Scotland"],
       description: "Monday - Friday, 8AM - 5PM"
     },
     {
