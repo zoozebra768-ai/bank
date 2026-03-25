@@ -20,13 +20,13 @@ export interface UserProfile {
 
 // Default user data
 export const defaultUser: UserProfile = {
-  name: "Lisaglenn",
-  email: "linawills48@gmail.com",
-  phone: "+1 (555) 123-4567",
-  accountHolder: "Lisa Wills & Glenn Howard Williams",
+  name: "User",
+  email: "",
+  phone: "",
+  accountHolder: "User Account",
   role: "Customer",
   avatar: "",
-  initials: "LG"
+  initials: "U"
 };
 
 // User data management functions
@@ -174,6 +174,25 @@ export const getUserAccountData = () => {
     }
   };
 
-  // Return user-specific data or default to linaglenn's data
-  return accountsByUser[userId || 'linaglenn'] || accountsByUser.linaglenn;
+  // Return user-specific data or a default empty account structure
+  if (userId && accountsByUser[userId as keyof typeof accountsByUser]) {
+    return accountsByUser[userId as keyof typeof accountsByUser];
+  }
+
+  // Fallback for users with no mapped account data
+  return {
+    "1": {
+      name: "Main Account",
+      number: "**** 0000",
+      fullNumber: "0000 0000 0000 0000",
+      balance: 0,
+      availableBalance: 0,
+      type: "Current",
+      openedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      interestRate: "0.00%",
+      routing: "000000000",
+      creditLimit: undefined,
+      dueDate: undefined
+    }
+  };
 };

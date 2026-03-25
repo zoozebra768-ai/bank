@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import RoryBankLogo from "@/components/RoryBankLogo";
+import { getUserDisplayName, getUserInitials } from "@/lib/user";
 
 export default function TransferPage() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export default function TransferPage() {
   ];
 
   const recentRecipients: Array<{ name: string; account: string; bank: string }> = [
-  
+
   ];
 
   const handleTransfer = () => {
@@ -85,7 +86,7 @@ export default function TransferPage() {
                   <Home className="w-5 h-5" />
                   Dashboard
                 </button>
-                
+
                 <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 font-medium">
                   <Send className="w-5 h-5" />
                   Transfer
@@ -140,7 +141,7 @@ export default function TransferPage() {
               <Home className="w-5 h-5" />
               Dashboard
             </button>
-            
+
             <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 text-amber-800 font-medium">
               <Send className="w-5 h-5" />
               Transfer
@@ -175,9 +176,9 @@ export default function TransferPage() {
             <div className="bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg p-4 text-white">
               <p className="text-sm font-medium mb-1">Need Help?</p>
               <p className="text-xs opacity-90 mb-3">Contact our support team</p>
-            <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
-              Get Support
-            </Button>
+              <Button className="w-full bg-white text-amber-700 hover:bg-slate-100" size="sm" onClick={() => router.push('/contact')}>
+                Get Support
+              </Button>
             </div>
           </div>
         </aside>
@@ -199,12 +200,12 @@ export default function TransferPage() {
               </button>
               <div className="relative group">
                 <Avatar className="cursor-pointer">
-                  <AvatarFallback className="bg-amber-600 text-white">LG</AvatarFallback>
+                  <AvatarFallback className="bg-amber-600 text-white">{getUserInitials()}</AvatarFallback>
                 </Avatar>
                 <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <div className="p-2">
                     <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
-                      Lisaglenn
+                      {getUserDisplayName()}
                     </div>
                     <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
                       Profile Settings
@@ -314,7 +315,7 @@ export default function TransferPage() {
                   </div>
 
                   {/* Transfer Button */}
-                  <Button 
+                  <Button
                     onClick={handleTransfer}
                     className="w-full bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800"
                     size="lg"

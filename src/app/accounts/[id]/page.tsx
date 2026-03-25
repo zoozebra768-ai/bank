@@ -36,6 +36,7 @@ import { getTransactions, getTotalIncome, getTotalExpenses, getStatementData, ty
 import { getUserData, getUserAccountData } from "@/lib/user";
 import { pdf } from '@react-pdf/renderer';
 import BankStatementPDF from "@/components/BankStatementPDF";
+import { getUserDisplayName, getUserInitials } from "@/lib/user";
 
 export default function AccountDetailsPage() {
   const params = useParams();
@@ -269,12 +270,12 @@ export default function AccountDetailsPage() {
               </button>
               <div className="relative group">
                 <Avatar className="cursor-pointer">
-                  <AvatarFallback className="bg-amber-600 text-white">LG</AvatarFallback>
+                  <AvatarFallback className="bg-amber-600 text-white">{getUserInitials()}</AvatarFallback>
                 </Avatar>
                 <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <div className="p-2">
                     <div className="px-3 py-2 text-sm text-slate-600 border-b border-slate-100">
-                      Lisaglenn
+                      {getUserDisplayName()}
                     </div>
                     <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">
                       Profile Settings

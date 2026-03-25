@@ -97,12 +97,19 @@ export default function ManagementDashboard() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [backups, setBackups] = useState<{ filename: string; created: string }[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>("linaglenn"); // Default to linaglenn
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [statementRange, setStatementRange] = useState({
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Jan 1st of current year
     to: new Date().toISOString().split('T')[0] // Today
   });
   const [editingTransaction, setEditingTransaction] = useState<number | null>(null);
+
+  // Auto-select first user if none selected
+  useEffect(() => {
+    if (!selectedUserId && users.length > 0) {
+      setSelectedUserId(users[0].id);
+    }
+  }, [users, selectedUserId]);
   const [editForm, setEditForm] = useState({
     name: '',
     amount: '',
