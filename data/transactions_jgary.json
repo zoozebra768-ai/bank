@@ -7,7 +7,7 @@
     "time": "23:34",
     "category": "Cash",
     "status": "Processed",
-    "merchant": "jessica #3214",
+    "merchant": "Jessica #3214",
     "type": "deposit"
   },
   {
@@ -41,6 +41,17 @@
     "category": "Cash",
     "status": "Processed",
     "merchant": "Jessica #8890",
+    "type": "deposit"
+  },
+  {
+    "id": 5,
+    "name": "Cash Deposit",
+    "amount": 7500,
+    "date": "2026-04-08",
+    "time": "10:31",
+    "category": "Cash",
+    "status": "Pending",
+    "merchant": "Jessica #7654",
     "type": "deposit"
   }
 ]
