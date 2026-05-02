@@ -34,7 +34,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import RoryBankLogo from "@/components/RoryBankLogo";
-import { getUserDisplayName, getUserInitials } from "@/lib/user";
+import { getUserDisplayName, getUserInitials, getUserAccountData } from "@/lib/user";
 
 export default function TransferPage() {
   const router = useRouter();
@@ -46,9 +46,13 @@ export default function TransferPage() {
   const [memo, setMemo] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
 
-  const accounts = [
-    { id: "1", name: "Current Account"},
-  ];
+  const accountData = getUserAccountData();
+  const accounts = Object.entries(accountData).map(([id, acc]) => ({
+    id,
+    name: acc.name,
+    number: acc.number,
+    balance: acc.balance,
+  }));
 
   const recentRecipients: Array<{ name: string; account: string; bank: string }> = [
 
