@@ -47,8 +47,7 @@ export default function TransferPage() {
   const [scheduleDate, setScheduleDate] = useState("");
 
   const accounts = [
-    // { id: "1", name: "Current Account", number: "****4582", balance: 12345.67 },
-    // { id: "2", name: "Savings Account", number: "****1234", balance: 45574.25 }
+    { id: "1", name: "Current Account"},
   ];
 
   const recentRecipients: Array<{ name: string; account: string; bank: string }> = [
