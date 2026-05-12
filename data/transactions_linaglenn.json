@@ -23,7 +23,7 @@
   },
   {
     "id": 3,
-    "name": "Cheque deposit ",
+    "name": "Cheque Deposit ",
     "amount": 3000000,
     "date": "2025-11-05",
     "time": "12:41",
@@ -34,11 +34,11 @@
   },
   {
     "id": 4,
-    "name": "Bank Tranfer",
+    "name": "Cheque Deposit",
     "amount": 3000000,
     "date": "2025-11-28",
     "time": "11:20",
-    "category": "Transfer",
+    "category": "Deposit",
     "status": "Processed",
     "merchant": "H & G Group Of Company",
     "type": "deposit"
